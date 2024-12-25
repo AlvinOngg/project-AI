@@ -3,9 +3,180 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>Game Grid with Lines</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+      #rumahNya {
+        position: relative;
+        width: 630px; /* 9 kolom x 70px */
+        height: 350px; /* 5 baris x 70px */
+        background-color: #f0f0f0;
+        border: 2px solid #ccc;
+      }
+      .node {
+        position: absolute;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        background-color: yellow;
+        border: 1px solid black;
+        text-align: center;
+        line-height: 45px;
+      }
+      svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1; /* Garis berada di belakang node */
+      }
+      line {
+        stroke: black;
+        stroke-width: 2;
+      }
+    </style>
   </head>
   <body>
-    Test
+    <div id="rumahNya">
+      <svg viewBox="0 0 630 350">
+        <!-- Horizontal lines -->
+        <line x1="70" y1="70" x2="560" y2="70" />
+        <line x1="70" y1="140" x2="560" y2="140" />
+        <line x1="70" y1="210" x2="560" y2="210" />
+        <line x1="70" y1="280" x2="560" y2="280" />
+
+        <!-- Vertical lines -->
+        <line x1="70" y1="70" x2="70" y2="280" />
+        <line x1="140" y1="70" x2="140" y2="280" />
+        <line x1="210" y1="70" x2="210" y2="280" />
+        <line x1="280" y1="70" x2="280" y2="280" />
+        <line x1="350" y1="70" x2="350" y2="280" />
+        <line x1="420" y1="70" x2="420" y2="280" />
+        <line x1="490" y1="70" x2="490" y2="280" />
+        <line x1="560" y1="70" x2="560" y2="280" />
+
+        <!-- Diagonal lines -->
+        <line x1="70" y1="70" x2="560" y2="280" />
+        <line x1="560" y1="70" x2="70" y2="280" />
+
+        <!-- Outer triangles (left and right) -->
+        <line x1="0" y1="140" x2="70" y2="210" />
+        <line x1="0" y1="210" x2="70" y2="140" />
+        <line x1="560" y1="140" x2="630" y2="70" />
+        <line x1="560" y1="210" x2="630" y2="280" />
+      </svg>
+    </div>
+    <script>
+      const jmlNode = [
+        [
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+        ],
+        [
+          { type: "" },
+          { type: "Orang" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "Macan" },
+        ],
+        [
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+        ],
+        [
+          { type: "" },
+          { type: "Macan" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "Orang" },
+        ],
+        [
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+          { type: "" },
+        ],
+      ];
+
+      function cekGame(id) {
+        alert("Titik yang diklik: " + id);
+      }
+
+      function gambarUlang() {
+        $("#rumahNya").html("");
+        for (var i = 0; i < 5; i++) {
+          for (var j = 0; j < 9; j++) {
+            if (
+              !(
+                (i == 0 && j == 1) ||
+                (i == 4 && j == 1) ||
+                (i == 1 && j == 0) ||
+                (i == 3 && j == 0) ||
+                (i == 1 && j == 8) ||
+                (i == 3 && j == 8) ||
+                (i == 4 && j == 7) ||
+                (i == 0 && j == 7)
+              )
+            ) {
+              if (jmlNode[i][j].type == "Orang") {
+                $("#rumahNya").append(
+                  `<div onclick='cekGame("${i}${j}")' style='top:${
+                    i * 70
+                  }px; background-image: url("man.png"); background-size:cover; left:${
+                    j * 70
+                  }px;' class='node'></div>`
+                );
+              } else if (jmlNode[i][j].type == "Macan") {
+                $("#rumahNya").append(
+                  `<div onclick='cekGame("${i}${j}")' style='top:${
+                    i * 70
+                  }px; background-image: url("tiger.png"); background-size:cover; left:${
+                    j * 70
+                  }px;' class='node'></div>`
+                );
+              } else {
+                $("#rumahNya").append(
+                  `<div onclick='cekGame("${i}${j}")' style='top:${
+                    i * 70
+                  }px; left:${j * 70}px;' class='node'></div>`
+                );
+              }
+            }
+          }
+        }
+      }
+
+      $(document).ready(() => {
+        gambarUlang();
+      });
+    </script>
   </body>
 </html>
