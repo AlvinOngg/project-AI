@@ -42,6 +42,10 @@
   </head>
   <body>
     <div id="turnInfo">Giliran: Pemain 1 (Orang)</div>
+    <br />
+    <div id="pion">Jumlah Pion: 21</div>
+    <br />
+    <div id="eatenPion">Pion yang dimakan: 0</div>
     <div id="rumahNya">
       <canvas id="canvasLayer"></canvas>
       <div id="highlight"></div>
@@ -99,6 +103,8 @@
       let turn = 1; // Menandai giliran (1 = giliran pertama)
       let macanX = 0;
       let macanY = 0;
+      let jumlahPion = 21;
+      let eatenPion = 0;
 
       $(document).ready(() => {
         jmlNode[0][0].bottomNode = jmlNode[0][1];
@@ -443,6 +449,16 @@
         });
       }
 
+      function updatePion(pion) {
+        const pions = $("#pion");
+        pions.text("Jumlah Pion: " + pion);
+      }
+
+      function updateEatenPion(eaten) {
+        const eatenPion = $("#eatenPion");
+        eatenPion.text("Pion yang dimakan: " + eaten);
+      }
+
       function cekGerak(posisiAwalX, posisiAwalY, posisiAkhirX, posisiAkhirY) {
         const deltaX = posisiAkhirX - posisiAwalX;
         const deltaY = posisiAkhirY - posisiAwalY;
@@ -477,7 +493,7 @@
       }
 
       function MakanManusia(gerak, node) {
-        if (!node || !gerak) return 0;
+        if (!node || !gerak) return 0; // Early exit for invalid input
 
         const directionMap = {
           Kanan: "rightNode",
@@ -491,11 +507,12 @@
         };
 
         const direction = directionMap[gerak];
-        if (!direction) return 0;
+        if (!direction) return 0; // Return 0 if direction is invalid
 
         let count = 0;
         let currentNode = node[direction];
 
+        // Count "Orang" nodes in the specified direction
         while (currentNode && currentNode.type) {
           if (currentNode.type === "Orang") {
             count++;
@@ -503,7 +520,19 @@
           currentNode = currentNode[direction];
         }
 
-        return count;
+        // If count is odd, remove "Orang" type from all visited nodes
+        if (count % 2 === 1) {
+          currentNode = node[direction]; // Reset to the starting node in direction
+          while (currentNode && currentNode.type) {
+            if (currentNode.type === "Orang") {
+              currentNode.type = ""; // Clear the type
+            }
+            currentNode = currentNode[direction];
+          }
+          return count; // Return the count of "Orang" consumed
+        } else {
+          return "invalid"; // Return "invalid" if count is even
+        }
       }
 
       function cekGame(i, j) {
@@ -521,17 +550,22 @@
             for (let x = highlightX; x < highlightX + 3; x++) {
               if (y >= 0 && y < 5 && x >= 0 && x < 9) {
                 jmlNode[y][x].type = "Orang";
+                jumlahPion--;
               }
             }
           }
           turn++;
         } else {
           if (turn % 2 === 1) {
-            if (node.type === "") {
-              node.type = "Orang";
+            if (jumlahPion != 0) {
+              if (node.type === "") {
+                node.type = "Orang";
+                jumlahPion--;
+              } else {
+                alert("Posisi sudah terisi!");
+                return;
+              }
             } else {
-              alert("Posisi sudah terisi!");
-              return;
             }
           } else {
             if (macanX === 0 && macanY === 0) {
@@ -543,11 +577,15 @@
                 var tempNode = jmlNode[macanX][macanY];
                 var gerak = cekGerak(macanX, macanY, i, j);
                 var makan = MakanManusia(gerak, tempNode);
-                alert(makan);
-                jmlNode[macanX][macanY].type = "";
-                node.type = "Macan";
-                macanX = i;
-                macanY = j;
+                if (makan == "invalid") {
+                  turn--;
+                } else {
+                  jmlNode[macanX][macanY].type = "";
+                  node.type = "Macan";
+                  macanX = i;
+                  macanY = j;
+                  eatenPion = eatenPion + makan;
+                }
               } else {
                 alert("Posisi sudah terisi!");
                 return;
@@ -558,6 +596,8 @@
         }
         alert("Posisi : (" + i + "," + j + ")");
         updateTurnInfo();
+        updatePion(jumlahPion);
+        updateEatenPion(eatenPion);
         gambarUlang();
       }
     </script>
