@@ -359,8 +359,10 @@
 
         if (!currentNode) return "invalid";
 
+        let id = j + "-" + i;
+        let valid = false;
+
         if (currentNode.type === "") {
-          let id = j + "-" + i;
           while (currentNode && currentNode.id != id) {
             if (currentNode.type === "") jarak++;
             currentNode = currentNode[direction];
@@ -370,11 +372,14 @@
         } else {
           while (currentNode) {
             if (currentNode.type === "Orang") count++;
+            if (currentNode.id == id) {
+              valid = true;
+            }
             currentNode = currentNode[direction];
           }
         }
 
-        if (count % 2 === 1) {
+        if (count % 2 === 1 && valid) {
           currentNode = node[direction];
           while (currentNode) {
             if (currentNode.type === "Orang") currentNode.type = "";
