@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Game Grid with Highlight</title>
+    <title>Catur Macanan Tradisional</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
       #rumahNya {
@@ -100,11 +100,14 @@
             .map((_, x) => new classNode(x, y, `${x}-${y}`))
         );
 
-      let turn = 1; // Menandai giliran (1 = giliran pertama)
+      let turn = 1;
       let macanX = 0;
       let macanY = 0;
       let jumlahPion = 21;
       let eatenPion = 0;
+      let firstClick = true;
+      let pionX = 0;
+      let pionY = 0;
 
       $(document).ready(() => {
         jmlNode[0][0].bottomNode = jmlNode[0][1];
@@ -463,37 +466,21 @@
         const deltaX = posisiAkhirX - posisiAwalX;
         const deltaY = posisiAkhirY - posisiAwalY;
 
-        if (deltaX === 0 && deltaY === 0) {
-          return "Tidak ada gerakan";
-        }
+        if (deltaX === 0 && deltaY === 0) return "Tidak ada gerakan";
+        if (deltaX === 0) return deltaY > 0 ? "Kanan" : "Kiri";
+        if (deltaY === 0) return deltaX > 0 ? "Bawah" : "Atas";
 
-        if (deltaX === 0) {
-          return deltaY > 0 ? "Kanan" : "Kiri";
-        }
-
-        if (deltaY === 0) {
-          return deltaX > 0 ? "Bawah" : "Atas";
-        }
-
-        if (deltaX > 0 && deltaY > 0) {
-          return "Serong Kanan Bawah";
-        }
-
-        if (deltaX < 0 && deltaY > 0) {
-          return "Serong Kanan Atas";
-        }
-
-        if (deltaX > 0 && deltaY < 0) {
-          return "Serong Kiri Bawah";
-        }
-
-        if (deltaX < 0 && deltaY < 0) {
-          return "Serong Kiri Atas";
-        }
+        return deltaX > 0
+          ? deltaY > 0
+            ? "Serong Kanan Bawah"
+            : "Serong Kiri Bawah"
+          : deltaY > 0
+          ? "Serong Kanan Atas"
+          : "Serong Kiri Atas";
       }
 
-      function MakanManusia(gerak, node) {
-        if (!node || !gerak) return 0; // Early exit for invalid input
+      function MakanManusia(gerak, node, i, j) {
+        if (!node || !gerak) return 0;
 
         const directionMap = {
           Kanan: "rightNode",
@@ -507,44 +494,46 @@
         };
 
         const direction = directionMap[gerak];
-        if (!direction) return 0; // Return 0 if direction is invalid
+        if (!direction) return 0;
 
         let count = 0;
+        let jarak = 0;
         let currentNode = node[direction];
 
-        // Count "Orang" nodes in the specified direction
-        while (currentNode && currentNode.type) {
-          if (currentNode.type === "Orang") {
-            count++;
-          }
-          currentNode = currentNode[direction];
-        }
+        if (!currentNode) return "invalid";
 
-        // If count is odd, remove "Orang" type from all visited nodes
-        if (count % 2 === 1) {
-          currentNode = node[direction]; // Reset to the starting node in direction
-          while (currentNode && currentNode.type) {
-            if (currentNode.type === "Orang") {
-              currentNode.type = ""; // Clear the type
-            }
+        if (currentNode.type === "") {
+          let id = j + "-" + i;
+          while (currentNode && currentNode.id != id) {
+            if (currentNode.type === "") jarak++;
             currentNode = currentNode[direction];
           }
-          return count; // Return the count of "Orang" consumed
+          jarak++;
+          return jarak === 1 ? 0 : "invalid";
         } else {
-          return "invalid"; // Return "invalid" if count is even
+          while (currentNode) {
+            if (currentNode.type === "Orang") count++;
+            currentNode = currentNode[direction];
+          }
         }
+
+        if (count % 2 === 1) {
+          currentNode = node[direction];
+          while (currentNode) {
+            if (currentNode.type === "Orang") currentNode.type = "";
+            currentNode = currentNode[direction];
+          }
+          return count;
+        }
+
+        return "invalid";
       }
 
-      function cekGame(i, j) {
+      function game(i, j) {
         const highlightX = parseInt($("#highlight").css("left")) / cellSize;
         const highlightY = parseInt($("#highlight").css("top")) / cellSize;
-
-        if (i < 0 || i >= 5 || j < 0 || j >= 9) {
-          alert("Koordinat di luar grid.");
-          return;
-        }
-
         const node = jmlNode[i][j];
+
         if (turn === 1) {
           for (let y = highlightY; y < highlightY + 3; y++) {
             for (let x = highlightX; x < highlightX + 3; x++) {
@@ -555,45 +544,68 @@
             }
           }
           turn++;
-        } else {
-          if (turn % 2 === 1) {
-            if (jumlahPion != 0) {
-              if (node.type === "") {
-                node.type = "Orang";
-                jumlahPion--;
-              } else {
-                alert("Posisi sudah terisi!");
-                return;
-              }
+          return;
+        }
+
+        if (turn % 2 === 1) {
+          if (jumlahPion !== 0) {
+            if (node.type === "") {
+              node.type = "Orang";
+              jumlahPion--;
             } else {
+              alert("Posisi sudah terisi!");
             }
           } else {
-            if (macanX === 0 && macanY === 0) {
+            if (firstClick) {
+              pionX = i;
+              pionY = j;
+              firstClick = false;
+              turn--;
+            } else {
+              jmlNode[pionX][pionY].type = "";
+              node.type = "Orang";
+              firstClick = true;
+            }
+          }
+        } else {
+          if (macanX === 0 && macanY === 0) {
+            if (node.type === "") {
               node.type = "Macan";
               macanX = i;
               macanY = j;
             } else {
-              if (node.type === "") {
-                var tempNode = jmlNode[macanX][macanY];
-                var gerak = cekGerak(macanX, macanY, i, j);
-                var makan = MakanManusia(gerak, tempNode);
-                if (makan == "invalid") {
-                  turn--;
-                } else {
-                  jmlNode[macanX][macanY].type = "";
-                  node.type = "Macan";
-                  macanX = i;
-                  macanY = j;
-                  eatenPion = eatenPion + makan;
-                }
+              alert("Posisi sudah terisi!");
+            }
+          } else {
+            if (node.type === "") {
+              const tempNode = jmlNode[macanX][macanY];
+              const gerak = cekGerak(macanX, macanY, i, j);
+              const makan = MakanManusia(gerak, tempNode, i, j);
+              if (makan === "invalid") {
+                turn--;
               } else {
-                alert("Posisi sudah terisi!");
-                return;
+                jmlNode[macanX][macanY].type = "";
+                node.type = "Macan";
+                macanX = i;
+                macanY = j;
+                eatenPion += makan;
               }
+            } else {
+              alert("Posisi sudah terisi!");
             }
           }
-          turn++;
         }
+        turn++;
+      }
+
+      function cekGame(i, j) {
+        if (i < 0 || i >= 5 || j < 0 || j >= 9) {
+          alert("Koordinat di luar grid.");
+          return;
+        }
+
+        game(i, j);
+
         alert("Posisi : (" + i + "," + j + ")");
         updateTurnInfo();
         updatePion(jumlahPion);
