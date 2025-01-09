@@ -627,7 +627,7 @@
             }
           }
         } else {
-          if (macanX === 0 && macanY === 0) {
+          if (macanX === 0 && macanY === 0 && jmlNode[macanX][macanY].type !== "Macan") {
             if (node.type === "") {
               node.type = "Macan";
               macanX = i;
