@@ -456,135 +456,163 @@
 
       class GameAI {
         constructor() {
-            this.maxDepth = 4; // Increased depth for better lookahead
+          this.maxDepth = 4; // Increased depth for better lookahead
         }
 
         evaluateBoard(state) {
-            let score = 0;
-            
-            // Heavily reward eating pawns
-            score += state.eatenPion * 150;
-            
-            // Center control is important
-            const centerX = 4;
-            const centerY = 2;
-            const distanceFromCenter = Math.abs(state.macanY - centerX) + Math.abs(state.macanX - centerY);
-            
-            // Stronger penalty for being away from center
-            score -= distanceFromCenter * 15;
-            
-            // Reward positions that control multiple directions
-            const validMoves = findValidMovesAndCount(state.macanX, state.macanY);
-            score += validMoves.length * 20;
-            
-            // Reward positions that threaten multiple pawns
-            const threatCount = validMoves.reduce((acc, move) => acc + (move.orangCount > 0 ? 1 : 0), 0);
-            score += threatCount * 30;
-            
-            // Penalize if too many pawns are on board
-            score -= state.pionDiPapan * 20;
-            
-            // Extra reward for getting close to winning condition
-            if (state.pionDiPapan + (21 - state.eatenPion) < 15) {
-                score += 200;
-            }
-            
-            return score;
+          let score = 0;
+
+          // Heavily reward eating pawns
+          score += state.eatenPion * 150;
+
+          // Center control is important
+          const centerX = 4;
+          const centerY = 2;
+          const distanceFromCenter =
+            Math.abs(state.macanY - centerX) + Math.abs(state.macanX - centerY);
+
+          // Stronger penalty for being away from center
+          score -= distanceFromCenter * 15;
+
+          // Reward positions that control multiple directions
+          const validMoves = findValidMovesAndCount(state.macanX, state.macanY);
+          score += validMoves.length * 20;
+
+          // Reward positions that threaten multiple pawns
+          const threatCount = validMoves.reduce(
+            (acc, move) => acc + (move.orangCount > 0 ? 1 : 0),
+            0
+          );
+          score += threatCount * 30;
+
+          // Penalize if too many pawns are on board
+          score -= state.pionDiPapan * 20;
+
+          // Extra reward for getting close to winning condition
+          if (state.pionDiPapan + (21 - state.eatenPion) < 15) {
+            score += 200;
+          }
+
+          return score;
         }
 
         minimax(depth, alpha, beta, isMaximizing, state) {
-            if (depth === 0) {
-                return this.evaluateBoard(state);
-            }
+          if (depth === 0) {
+            return this.evaluateBoard(state);
+          }
 
-            if (isMaximizing) {
-                let maxEval = -Infinity;
-                const validMoves = findValidMovesAndCount(state.macanX, state.macanY);
-                
-                // Sort moves to improve alpha-beta pruning
-                validMoves.sort((a, b) => b.orangCount - a.orangCount);
-                
-                if (validMoves.length === 0) return -10000;
-                
-                for (const move of validMoves) {
-                    const newState = {
-                        macanX: move.node.y,
-                        macanY: move.node.x,
-                        pionDiPapan: state.pionDiPapan - move.orangCount,
-                        eatenPion: state.eatenPion + move.orangCount
-                    };
-                    
-                    const evalScore = this.minimax(depth - 1, alpha, beta, false, newState);
-                    maxEval = Math.max(maxEval, evalScore);
-                    alpha = Math.max(alpha, evalScore);
-                    
-                    if (beta <= alpha) break;
-                }
-                return maxEval;
-            } else {
-                let minEval = Infinity;
-                // Consider more sophisticated human moves
-                const possibleMoves = this.getAdvancedHumanMoves(state);
-                
-                if (possibleMoves.length === 0) return 10000;
-                
-                for (const move of possibleMoves) {
-                    const newState = {
-                        ...state,
-                        pionDiPapan: Math.min(state.pionDiPapan + 1, 21)
-                    };
-                    
-                    const evalScore = this.minimax(depth - 1, alpha, beta, true, newState);
-                    minEval = Math.min(minEval, evalScore);
-                    beta = Math.min(beta, evalScore);
-                    
-                    if (beta <= alpha) break;
-                }
-                return minEval;
+          if (isMaximizing) {
+            let maxEval = -Infinity;
+            const validMoves = findValidMovesAndCount(
+              state.macanX,
+              state.macanY
+            );
+
+            // Sort moves to improve alpha-beta pruning
+            validMoves.sort((a, b) => b.orangCount - a.orangCount);
+
+            if (validMoves.length === 0) return -10000;
+
+            for (const move of validMoves) {
+              const newState = {
+                macanX: move.node.y,
+                macanY: move.node.x,
+                pionDiPapan: state.pionDiPapan - move.orangCount,
+                eatenPion: state.eatenPion + move.orangCount,
+              };
+
+              const evalScore = this.minimax(
+                depth - 1,
+                alpha,
+                beta,
+                false,
+                newState
+              );
+              maxEval = Math.max(maxEval, evalScore);
+              alpha = Math.max(alpha, evalScore);
+
+              if (beta <= alpha) break;
             }
+            return maxEval;
+          } else {
+            let minEval = Infinity;
+            // Consider more sophisticated human moves
+            const possibleMoves = this.getAdvancedHumanMoves(state);
+
+            if (possibleMoves.length === 0) return 10000;
+
+            for (const move of possibleMoves) {
+              const newState = {
+                ...state,
+                pionDiPapan: Math.min(state.pionDiPapan + 1, 21),
+              };
+
+              const evalScore = this.minimax(
+                depth - 1,
+                alpha,
+                beta,
+                true,
+                newState
+              );
+              minEval = Math.min(minEval, evalScore);
+              beta = Math.min(beta, evalScore);
+
+              if (beta <= alpha) break;
+            }
+            return minEval;
+          }
         }
 
         getAdvancedHumanMoves(state) {
-            const moves = [];
-            // Consider all possible positions where human can place pawns
-            for (let i = 0; i < 5; i++) {
-                for (let j = 0; j < 9; j++) {
-                    if (jmlNode[i][j].type === "") {
-                        moves.push({ x: i, y: j });
-                    }
-                }
+          const moves = [];
+          // Consider all possible positions where human can place pawns
+          for (let i = 0; i < 5; i++) {
+            for (let j = 0; j < 9; j++) {
+              if (jmlNode[i][j].type === "") {
+                moves.push({ x: i, y: j });
+              }
             }
-            return moves;
+          }
+          return moves;
         }
 
         getBestMove(state) {
-            let bestMove = null;
-            let bestValue = -Infinity;
-            const validMoves = findValidMovesAndCount(state.macanX, state.macanY);
-            
-            // Sort moves to improve alpha-beta pruning
-            validMoves.sort((a, b) => b.orangCount - a.orangCount);
-            
-            for (const move of validMoves) {
-                const newState = {
-                    macanX: move.node.y,
-                    macanY: move.node.x,
-                    pionDiPapan: state.pionDiPapan - move.orangCount,
-                    eatenPion: state.eatenPion + move.orangCount
-                };
-                
-                const moveValue = this.minimax(this.maxDepth, -Infinity, Infinity, false, newState);
-                
-                // Prioritize moves that eat pawns when scores are equal
-                if (moveValue > bestValue || (moveValue === bestValue && move.orangCount > 0)) {
-                    bestValue = moveValue;
-                    bestMove = move;
-                }
+          let bestMove = null;
+          let bestValue = -Infinity;
+          const validMoves = findValidMovesAndCount(state.macanX, state.macanY);
+
+          // Sort moves to improve alpha-beta pruning
+          validMoves.sort((a, b) => b.orangCount - a.orangCount);
+
+          for (const move of validMoves) {
+            const newState = {
+              macanX: move.node.y,
+              macanY: move.node.x,
+              pionDiPapan: state.pionDiPapan - move.orangCount,
+              eatenPion: state.eatenPion + move.orangCount,
+            };
+
+            const moveValue = this.minimax(
+              this.maxDepth,
+              -Infinity,
+              Infinity,
+              false,
+              newState
+            );
+
+            // Prioritize moves that eat pawns when scores are equal
+            if (
+              moveValue > bestValue ||
+              (moveValue === bestValue && move.orangCount > 0)
+            ) {
+              bestValue = moveValue;
+              bestMove = move;
             }
-            
-            return bestMove;
+          }
+
+          return bestMove;
         }
-    }
+      }
 
       function game(i, j) {
         const highlightX = parseInt($("#highlight").css("left")) / cellSize;
@@ -626,8 +654,13 @@
               firstClick = true;
             }
           }
+          gerakMacan(node);
         } else {
-          if (macanX === 0 && macanY === 0 && jmlNode[macanX][macanY].type !== "Macan") {
+          if (
+            macanX === 0 &&
+            macanY === 0 &&
+            jmlNode[macanX][macanY].type !== "Macan"
+          ) {
             if (node.type === "") {
               node.type = "Macan";
               macanX = i;
@@ -637,42 +670,55 @@
               turn--;
               return;
             }
-          } else {
-            const ai = new GameAI();
-            const currentState = {
-                macanX: macanX,
-                macanY: macanY,
-                pionDiPapan: pionDiPapan,
-                eatenPion: eatenPion
-            };
-            
-            const bestMove = ai.getBestMove(currentState);
-            
-            if (bestMove) {
-                const tempNode = jmlNode[macanX][macanY];
-                const gerak = cekGerak(macanX, macanY, bestMove.node.y, bestMove.node.x);
-                const makan = MakanManusia(gerak, tempNode, bestMove.node.y, bestMove.node.x);
-                
-                if (makan !== "invalid") {
-                    jmlNode[macanX][macanY].type = "";
-                    jmlNode[bestMove.node.y][bestMove.node.x].type = "Macan";
-                    macanX = bestMove.node.y;
-                    macanY = bestMove.node.x;
-                    eatenPion += makan;
-                    pionDiPapan -= makan;
-
-                    if (pionDiPapan + jumlahPion < 14) {
-                        cekMenang("Macan");
-                    }
-                } else {
-                    turn--;
-                    return;
-                }
-            } else {
-                turn--;
-                return;
-            }
           }
+        }
+        turn++;
+      }
+
+      function gerakMacan(node) {
+        const ai = new GameAI();
+        const currentState = {
+          macanX: macanX,
+          macanY: macanY,
+          pionDiPapan: pionDiPapan,
+          eatenPion: eatenPion,
+        };
+
+        const bestMove = ai.getBestMove(currentState);
+
+        if (bestMove) {
+          const tempNode = jmlNode[macanX][macanY];
+          const gerak = cekGerak(
+            macanX,
+            macanY,
+            bestMove.node.y,
+            bestMove.node.x
+          );
+          const makan = MakanManusia(
+            gerak,
+            tempNode,
+            bestMove.node.y,
+            bestMove.node.x
+          );
+
+          if (makan !== "invalid") {
+            jmlNode[macanX][macanY].type = "";
+            jmlNode[bestMove.node.y][bestMove.node.x].type = "Macan";
+            macanX = bestMove.node.y;
+            macanY = bestMove.node.x;
+            eatenPion += makan;
+            pionDiPapan -= makan;
+
+            if (pionDiPapan + jumlahPion < 14) {
+              cekMenang("Macan");
+            }
+          } else {
+            turn--;
+            return;
+          }
+        } else {
+          turn--;
+          return;
         }
         turn++;
       }
@@ -709,7 +755,6 @@
         }
 
         if (type == "Macan") {
-          console.log("test");
           alert("Macan Menang");
           Reset();
         }
