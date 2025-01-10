@@ -639,6 +639,7 @@
               node.type = "Orang";
               jumlahPion--;
               pionDiPapan++;
+              gerakMacan(node);
             } else {
               alert("Posisi sudah terisi!");
             }
@@ -652,9 +653,9 @@
               jmlNode[pionX][pionY].type = "";
               node.type = "Orang";
               firstClick = true;
+              gerakMacan(node);
             }
           }
-          gerakMacan(node);
         } else {
           if (
             macanX === 0 &&
