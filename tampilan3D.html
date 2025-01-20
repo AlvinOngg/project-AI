@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Catur Macanan Tradisional 3D</title>
+    
+    <!-- Required Libraries -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #2C3E50;
+            --secondary-color: #E74C3C;
+            --accent-color: #F1C40F;
+            --bg-gradient: linear-gradient(135deg, #ECE9E6, #FFFFFF);
+            --shadow-color: rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--primary-color);
+            overflow: hidden;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+        }
+
+        #game-board {
+            flex-grow: 1;
+            position: relative;
+        }
+
+        .game-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .info-card {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateX(5px);
+        }
+
+        #rumahNya {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #highlight {
+            position: absolute;
+            background: rgba(52, 152, 219, 0.2);
+            border: 2px dashed #3498db;
+            border-radius: 15px;
+            pointer-events: none;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+
+        .node {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .node.macan {
+            background: linear-gradient(145deg, #f39c12, #d35400);
+        }
+
+        .node.orang {
+            background: linear-gradient(145deg, #2ecc71, #27ae60);
+        }
+
+        .valid-move {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.4); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(52, 152, 219, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, var(--accent-color), #f39c12);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .game-info {
+                width: 90%;
+                max-width: none;
+                margin: 10px auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-info">
+            <div class="info-card" id="turnInfo">Giliran: Pemain 1 (Orang)</div>
+            <div class="info-card" id="pion">Jumlah Pion: 21</div>
+            <div class="info-card" id="pion2">Pion Di Papan: 0</div>
+            <div class="info-card" id="eatenPion">Pion yang dimakan: 0</div>
+            <button onclick="Reset()">Reset Game</button>
+        </div>
+        <div id="game-board">
+            <div id="rumahNya">
+                <canvas id="canvasLayer"></canvas>
+                <div id="highlight"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Tambahkan variabel global
+        let turn = 1;
+        let macanX = 0;
+        let macanY = 0;
+        let jumlahPion = 21;
+        let eatenPion = 0;
+        let firstClick = true;
+        let pionX = 0;
+        let pionY = 0;
+        let pionDiPapan = 0;
+
+        // Inisialisasi THREE.js components
+        let renderer, scene, camera, controls;
+        let board, pieces = new Map();
+        let raycaster, mouse;
+
+        // Tambahkan clock untuk animasi
+        const clock = new THREE.Clock();
+
+        class classNode {
+            constructor(x, y, id) {
+                this.id = id;
+                this.type = ""; // Default kosong
+                this.topNode = null;
+                this.bottomNode = null;
+                this.leftNode = null;
+                this.rightNode = null;
+                this.topRightNode = null;
+                this.topLeftNode = null;
+                this.bottomLeftNode = null;
+                this.bottomRightNode = null;
+                this.arrNode = [
+                    this.topNode,
+                    this.bottomNode,
+                    this.leftNode,
+                    this.rightNode,
+                    this.topRightNode,
+                    this.topLeftNode,
+                    this.bottomLeftNode,
+                    this.bottomRightNode,
+                ];
+                this.x = x;
+                this.y = y;
+            }
+
+            updateArrNode() {
+                this.arrNode = [
+                    this.topNode,
+                    this.bottomNode,
+                    this.leftNode,
+                    this.rightNode,
+                    this.topRightNode,
+                    this.topLeftNode,
+                    this.bottomLeftNode,
+                    this.bottomRightNode,
+                ];
+            }
+        }
+
+        // Initialize Three.js Scene
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 8, 3);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, canvas: document.getElementById('canvasLayer') });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 5;
+            controls.maxDistance = 15;
+            controls.maxPolarAngle = Math.PI / 2.1;
+
+            // Initialize components
+            setupLighting();
+            createBoard();
+            setupInteraction();
+
+            // Start animation loop
+            animate();
+        }
+
+        // Window resize handler
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Update controls
+            if (controls) controls.update();
+            
+            // Update TWEEN
+            if (TWEEN) TWEEN.update();
+            
+            // Render scene
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        // Initialize everything
+        window.addEventListener('load', () => {
+            initThreeJS();
+            const cellSize = 70;
+            jmlNode = Array(5).fill(null).map((_, y) =>
+                Array(9).fill(null).map((_, x) => new classNode(x, y, `${x}-${y}`))
+            );
+            setNodeRelationships(jmlNode, 5, 9);
+        });
+
+        window.addEventListener('resize', onWindowResize);
+
+        function setupLighting() {
+            // Ambient light
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            // Main directional light
+            const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            mainLight.position.set(5, 8, 5);
+            mainLight.castShadow = true;
+            mainLight.shadow.mapSize.width = 2048;
+            mainLight.shadow.mapSize.height = 2048;
+            scene.add(mainLight);
+
+            // Fill light
+            const fillLight = new THREE.DirectionalLight(0x7ec0ee, 0.3);
+            fillLight.position.set(-5, 3, -5);
+            scene.add(fillLight);
+        }
+
+        function createBoard() {
+            // Create board base
+            const boardGeometry = new THREE.BoxGeometry(9, 0.2, 5);
+            const boardMaterial = new THREE.MeshStandardMaterial({
+                color: 0x4a4a4a,
+                roughness: 0.5,
+                metalness: 0.1
+            });
+            board = new THREE.Mesh(boardGeometry, boardMaterial);
+            board.receiveShadow = true;
+            scene.add(board);
+
+            createGridLines();
+            createNodes();
+        }
+
+        function createGridLines() {
+            const lineMaterial = new THREE.LineBasicMaterial({ color: 0x2c3e50, linewidth: 2 });
+            
+            // Fungsi helper untuk membuat garis
+            function addLine(x1, y1, x2, y2) {
+                const points = [];
+                points.push(new THREE.Vector3(x1, 0.11, y1));
+                points.push(new THREE.Vector3(x2, 0.11, y2));
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const line = new THREE.Line(geometry, lineMaterial);
+                scene.add(line);
+            }
+
+            // Gambar garis horizontal dan vertikal untuk area tengah (2 <= x <= 6)
+            for (let x = -2; x <= 2; x++) {
+                // Horizontal lines
+                addLine(x, -1, x, 1);
+                // Vertical lines
+                addLine(-2, x, 2, x);
+            }
+
+            // Gambar garis untuk node pinggir
+            // Kiri
+            addLine(-4, -2, -4, 2);  // Vertical left edge
+            addLine(-4, 0, -3, 0);   // Connection to middle
+            addLine(-4, -2, -3, -1); // Diagonal connections
+            addLine(-4, 2, -3, 1);
+
+            // Kanan
+            addLine(4, -2, 4, 2);    // Vertical right edge
+            addLine(3, 0, 4, 0);     // Connection to middle
+            addLine(3, -1, 4, -2);   // Diagonal connections
+            addLine(3, 1, 4, 2);
+
+            // Diagonal lines di area tengah
+            for (let x = -2; x < 2; x++) {
+                for (let y = -1; y < 1; y++) {
+                    if ((x + y) % 2 === 0) {
+                        addLine(x, y, x + 1, y + 1);
+                        addLine(x + 1, y, x, y + 1);
+                    }
+                }
+            }
+        }
+
+        function createNodes() {
+            const nodeGeometry = new THREE.SphereGeometry(0.1, 32, 32);
+            const nodeMaterial = new THREE.MeshStandardMaterial({
+                color: 0xf1c40f,
+                metalness: 0.5,
+                roughness: 0.3
+            });
+
+            // Fungsi helper untuk membuat node
+            function addNode(x, y) {
+                const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
+                node.position.set(x, 0.2, y);
+                node.castShadow = true;
+                node.receiveShadow = true;
+                
+                // Convert to grid coordinates
+                const gridX = Math.round(x + 4);
+                const gridY = Math.round(y + 2);
+                node.userData.nodeId = `${gridX}-${gridY}`;
+                
+                scene.add(node);
+            }
+
+            // Buat nodes sesuai dengan pola Macanan
+            // Area tengah (2 <= x <= 6)
+            for (let x = -2; x <= 2; x++) {
+                for (let y = -1; y <= 1; y++) {
+                    addNode(x, y);
+                }
+            }
+
+            // Nodes di pinggir
+            // Kiri
+            addNode(-4, -2);
+            addNode(-4, 0);
+            addNode(-4, 2);
+
+            // Kanan
+            addNode(4, -2);
+            addNode(4, 0);
+            addNode(4, 2);
+        }
+
+        function createPiece(type, x, z) {
+            let geometry, material;
+            
+            if (type === 'Macan') {
+                geometry = new THREE.ConeGeometry(0.2, 0.4, 32);
+                material = new THREE.MeshStandardMaterial({
+                    color: 0xe67e22,
+                    metalness: 0.7,
+                    roughness: 0.3,
+                    emissive: 0xe67e22,
+                    emissiveIntensity: 0.2
+                });
+            } else {
+                geometry = new THREE.CylinderGeometry(0.15, 0.15, 0.3, 32);
+                material = new THREE.MeshStandardMaterial({
+                    color: 0x27ae60,
+                    metalness: 0.5,
+                    roughness: 0.5
+                });
+            }
+
+            const piece = new THREE.Mesh(geometry, material);
+            piece.position.set(x, 0.3, z);
+            piece.castShadow = true;
+            piece.receiveShadow = true;
+            
+            // Simpan tipe piece dalam userData
+            piece.userData.type = type;
+            piece.userData.isPlayPiece = true;
+            
+            scene.add(piece);
+            return piece;
+        }
+
+        // Update board visualization
+        function updateBoardVisuals() {
+            // Clear existing pieces
+            pieces.forEach(piece => {
+                if (piece && piece.parent) {
+                    scene.remove(piece);
+                }
+            });
+            pieces.clear();
+
+            // Update pieces based on jmlNode
+            jmlNode.forEach((row, i) => {
+                row.forEach((node, j) => {
+                    if (node.type && 
+                        !(
+                            (i === 0 && j === 1) || (i === 4 && j === 1) ||
+                            (i === 1 && j === 0) || (i === 3 && j === 0) ||
+                            (i === 1 && j === 8) || (i === 3 && j === 8) ||
+                            (i === 4 && j === 7) || (i === 0 && j === 7)
+                        )) {
+                        const worldX = j - 4;
+                        const worldZ = i - 2;
+                        const piece = createPiece(node.type, worldX, worldZ);
+                        pieces.set(`${i}-${j}`, piece);
+                    }
+                });
+            });
+        }
+
+        // Setup mouse interaction
+        function setupInteraction() {
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('click', onMouseClick);
+        }
+
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Highlight hover effects
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+
+            scene.children.forEach(child => {
+                if (child.isGroup && child.userData.isPlayPiece) {
+                    child.children[1].material.opacity = 0.2;
+                }
+            });
+
+            if (intersects.length > 0) {
+                const object = intersects[0].object;
+                if (object.parent && object.parent.userData.isPlayPiece) {
+                    object.parent.children[1].material.opacity = 0.5;
+                }
+            }
+        }
+
+        function onMouseClick(event) {
+            event.preventDefault();
+            
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(board);
+
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                const gridX = Math.round(point.x + 4);
+                const gridY = Math.round(point.z + 2);
+                
+                if (gridX >= 0 && gridX < 9 && gridY >= 0 && gridY < 5) {
+                    cekGame(gridY, gridX);
+                }
+            }
+        }
+
+        // Animation utilities
+        function animateMove(piece, fromPos, toPos) {
+            new TWEEN.Tween(fromPos)
+                .to(toPos, 500)
+                .easing(TWEEN.Easing.Quadratic.Out)
+                .onUpdate(() => {
+                    piece.position.set(fromPos.x, fromPos.y, fromPos.z);
+                })
+                .start();
+        }
+
+        // Effect systems
+        function createCaptureEffect(position) {
+            const particleCount = 30;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = position.x;
+                positions[i * 3 + 1] = position.y;
+                positions[i * 3 + 2] = position.z;
+
+                colors[i * 3] = 1;
+                colors[i * 3 + 1] = 0.5;
+                colors[i * 3 + 2] = 0;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.1,
+                vertexColors: true,
+                transparent: true
+            });
+
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            // Animate particles    
+             positions = particles.geometry.attributes.position.array;
+            const initialPositions = positions.slice();
+
+            new TWEEN.Tween({ t: 0 })
+                .to({ t: 1 }, 1000)
+                .onUpdate(function(object) {
+                    for (let i = 0; i < particleCount; i++) {
+                        const i3 = i * 3;
+                        positions[i3] = initialPositions[i3] + (Math.random() - 0.5) * object.t;
+                        positions[i3 + 1] = initialPositions[i3 + 1] + object.t;
+                        positions[i3 + 2] = initialPositions[i3 + 2] + (Math.random() - 0.5) * object.t;
+                    }
+                    particles.geometry.attributes.position.needsUpdate = true;
+                    material.opacity = 1 - object.t;
+                })
+                .onComplete(() => {
+                    scene.remove(particles);
+                })
+                .start();
+        }
+
+        // Integrate with original game logic
+        const originalCekGame = cekGame;
+        window.cekGame = function(i, j) {
+            originalCekGame(i, j);
+            updateBoardVisuals();
+        }
+
+        // Modified game functions
+        function updateTurnInfo() {
+            const turnInfo = $("#turnInfo");
+            if (turn % 2 === 1) {
+                turnInfo.text("Giliran: Pemain 1 (Orang)");
+                camera.position.set(0, 5, 5);
+            } else {
+                turnInfo.text("Giliran: Pemain 2 (Macan)");
+                camera.position.set(0, 5, -5);
+            }
+            new TWEEN.Tween(camera.position)
+                .to(camera.position, 1000)
+                .easing(TWEEN.Easing.Cubic.InOut)
+                .start();
+        }
+
+        // Initialize game
+        initThreeJS();
+    </script>
+</body>
+</html>
