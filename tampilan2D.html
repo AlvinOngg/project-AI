@@ -864,23 +864,22 @@
         game(i, j);
 
         let validMoves = null;
+        gambarUlang(validMoves);
 
-        if (turn % 2 == 0 && turn != 2) {
+        if (turn % 2 == 1 && turn != 2) {
           validMoves = findValidMovesAndCount(macanX, macanY);
           if (validMoves.length == 0) {
             cekMenang("Orang");
           }
-        } else {
-          validMoves = null;
         }
         updateTurnInfo();
         updatePion(jumlahPion);
         updateEatenPion(eatenPion);
         updatePionDiPapan(pionDiPapan);
-        gambarUlang(validMoves);
       }
 
       function cekMenang(type) {
+        gambarUlang(null);
         if (type == "Orang") {
           alert("Orang Menang");
           Reset();
