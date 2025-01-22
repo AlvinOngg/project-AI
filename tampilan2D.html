@@ -7,133 +7,135 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    
+
     <style>
-        :root {
-            --board-bg: #f0d9b5;
-            --dark-square: #b58863;
-            --light-square: #f0d9b5;
-            --border-color: #8b4513;
-            --text-color: #2c1810;
-            --highlight-color: rgba(255, 255, 0, 0.4);
-        }
+      :root {
+        --board-bg: #f0d9b5;
+        --dark-square: #b58863;
+        --light-square: #f0d9b5;
+        --border-color: #8b4513;
+        --text-color: #2c1810;
+        --highlight-color: rgba(255, 255, 0, 0.4);
+      }
 
-        body {
-            background: linear-gradient(45deg, #2c1810, #8b4513);
-            margin: 0;
-            padding: 20px;
-            font-family: 'Arial', sans-serif;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+      body {
+        background: linear-gradient(45deg, #2c1810, #8b4513);
+        margin: 0;
+        padding: 20px;
+        font-family: "Arial", sans-serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
 
-        .game-wrapper {
-            background: var(--board-bg);
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            border: 8px solid var(--border-color);
-        }
+      .game-wrapper {
+        background: var(--board-bg);
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        border: 8px solid var(--border-color);
+      }
 
-        .info-panel {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border: 2px solid var(--border-color);
-            text-align: center;
-            color: var(--text-color);
-            font-size: 18px;
-            font-weight: bold;
-        }
+      .info-panel {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        border: 2px solid var(--border-color);
+        text-align: center;
+        color: var(--text-color);
+        font-size: 18px;
+        font-weight: bold;
+      }
 
-        #turnInfo, #pion, #pion2, #eatenPion {
-            margin: 10px 0;
-            padding: 8px;
-            background: var(--light-square);
-            border-radius: 5px;
-        }
+      #turnInfo,
+      #pion,
+      #pion2,
+      #eatenPion {
+        margin: 10px 0;
+        padding: 8px;
+        background: var(--light-square);
+        border-radius: 5px;
+      }
 
-        #rumahNya {
-            position: relative;
-            width: 630px;
-            height: 350px;
-            background: var(--board-bg);
-            border: 4px solid var(--border-color);
-            border-radius: 8px;
-            overflow: hidden;
-        }
+      #rumahNya {
+        position: relative;
+        width: 630px;
+        height: 350px;
+        background: var(--board-bg);
+        border: 4px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+      }
 
-        .node {
-            position: absolute;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            border: 3px solid var(--border-color);
-            cursor: pointer;
-            transition: transform 0.2s ease;
-            background-size: cover !important;
-            background-position: center !important;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
+      .node {
+        position: absolute;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        border: 3px solid var(--border-color);
+        cursor: pointer;
+        transition: transform 0.2s ease;
+        background-size: cover !important;
+        background-position: center !important;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
 
-        .node:hover {
-            transform: scale(1.1);
-        }
+      .node:hover {
+        transform: scale(1.1);
+      }
 
-        #highlight {
-            position: absolute;
-            width: 180px;
-            height: 180px;
-            border: 4px solid #ffd700;
-            border-radius: 10px;
-            pointer-events: none;
-            display: none;
-            box-shadow: 0 0 20px #ffd700;
-            background: var(--highlight-color);
-        }
+      #highlight {
+        position: absolute;
+        width: 180px;
+        height: 180px;
+        border: 4px solid #ffd700;
+        border-radius: 10px;
+        pointer-events: none;
+        display: none;
+        box-shadow: 0 0 20px #ffd700;
+        background: var(--highlight-color);
+      }
 
-        .node[style*="man.png"] {
-            background-color: #d4a373 !important;
-        }
+      .node[style*="man.png"] {
+        background-color: #d4a373 !important;
+      }
 
-        .node[style*="tiger.png"] {
-            background-color: #8b4513 !important;
-        }
+      .node[style*="tiger.png"] {
+        background-color: #8b4513 !important;
+      }
 
-        .wood-grain {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: repeating-linear-gradient(
-                45deg,
-                rgba(139, 69, 19, 0.1),
-                rgba(139, 69, 19, 0.1) 10px,
-                rgba(139, 69, 19, 0.2) 10px,
-                rgba(139, 69, 19, 0.2) 20px
-            );
-            pointer-events: none;
-        }
+      .wood-grain {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: repeating-linear-gradient(
+          45deg,
+          rgba(139, 69, 19, 0.1),
+          rgba(139, 69, 19, 0.1) 10px,
+          rgba(139, 69, 19, 0.2) 10px,
+          rgba(139, 69, 19, 0.2) 20px
+        );
+        pointer-events: none;
+      }
     </style>
-      
   </head>
   <body>
     <div class="game-wrapper">
-        <div class="info-panel">
-            <div id="turnInfo">Giliran: Pemain 1 (Orang)</div>
-            <div id="pion">Jumlah Pion: 21</div>
-            <div id="pion2">Pion Di Papan: 0</div>
-            <div id="eatenPion">Pion yang dimakan: 0</div>
-        </div>
-        <div id="rumahNya">
-            <div class="wood-grain"></div>
-            <canvas id="canvasLayer"></canvas>
-            <div id="highlight"></div>
-        </div>
+      <div class="info-panel">
+        <div id="turnInfo">Giliran: Pemain 1 (Orang)</div>
+        <div id="pion">Jumlah Pion: 21</div>
+        <div id="pion2">Pion Di Papan: 0</div>
+        <div id="eatenPion">Pion yang dimakan: 0</div>
+      </div>
+      <div id="rumahNya">
+        <div class="wood-grain"></div>
+        <canvas id="canvasLayer"></canvas>
+        <div id="highlight"></div>
+      </div>
     </div>
     <script>
       // Definisi Kelas classNode
@@ -437,10 +439,10 @@
                 : "";
 
             rumahNya.append(
-              `<div onclick='cekGame(${y}, ${x})' 
-                    style='top:${y * cellSize}px; left:${x * cellSize}px; 
-                           ${backgroundImage} ${backgroundColor} background-size:cover;' 
-                    class='node' data-x='${x}' data-y='${y}'></div>`
+              `<div onclick='cekGame(${y}, ${x})'
+                          style='top:${y * cellSize}px; left:${x * cellSize}px;
+                                 ${backgroundImage} ${backgroundColor} background-size:cover;'
+                          class='node' data-x='${x}' data-y='${y}'></div>`
             );
           }
         });
@@ -655,6 +657,39 @@
           return moves;
         }
 
+        getBestPositionForTiger(state) {
+          let bestScore = -Infinity;
+          let bestPosition = null;
+
+          jmlNode.flat().forEach((node) => {
+            if (node.type === "") {
+              // Create a temporary state reflecting the tiger being placed at the current node
+              const newState = {
+                macanX: node.y,
+                macanY: node.x,
+                pionDiPapan: state.pionDiPapan,
+                eatenPion: state.eatenPion,
+              };
+
+              // Evaluate the position using minimax
+              const score = this.minimax(
+                this.maxDepth,
+                -Infinity,
+                Infinity,
+                false,
+                newState
+              );
+
+              if (score > bestScore) {
+                bestScore = score;
+                bestPosition = node;
+              }
+            }
+          });
+
+          return bestPosition;
+        }
+
         getBestMove(state) {
           let bestMove = null;
           let bestValue = -Infinity;
@@ -709,6 +744,22 @@
             }
           }
           turn++;
+
+          const ai = new GameAI();
+
+          const currentState = {
+            pionDiPapan: pionDiPapan,
+            eatenPion: eatenPion,
+          };
+          const bestPosition = ai.getBestPositionForTiger(currentState);
+
+          if (bestPosition) {
+            bestPosition.type = "Macan";
+            macanX = bestPosition.y;
+            macanY = bestPosition.x;
+            turn++;
+          }
+
           return;
         }
 
@@ -721,6 +772,7 @@
               gerakMacan(node);
             } else {
               alert("Posisi sudah terisi!");
+              turn--;
             }
           } else {
             if (firstClick) {

@@ -358,10 +358,10 @@
                 : "";
 
             rumahNya.append(
-              `<div onclick='cekGame(${y}, ${x})' 
-                    style='top:${y * cellSize}px; left:${x * cellSize}px; 
-                           ${backgroundImage} ${backgroundColor} background-size:cover;' 
-                    class='node' data-x='${x}' data-y='${y}'></div>`
+              `<div onclick='cekGame(${y}, ${x})'
+                          style='top:${y * cellSize}px; left:${x * cellSize}px;
+                                 ${backgroundImage} ${backgroundColor} background-size:cover;'
+                          class='node' data-x='${x}' data-y='${y}'></div>`
             );
           }
         });
@@ -576,6 +576,39 @@
           return moves;
         }
 
+        getBestPositionForTiger(state) {
+          let bestScore = -Infinity;
+          let bestPosition = null;
+
+          jmlNode.flat().forEach((node) => {
+            if (node.type === "") {
+              // Create a temporary state reflecting the tiger being placed at the current node
+              const newState = {
+                macanX: node.y,
+                macanY: node.x,
+                pionDiPapan: state.pionDiPapan,
+                eatenPion: state.eatenPion,
+              };
+
+              // Evaluate the position using minimax
+              const score = this.minimax(
+                this.maxDepth,
+                -Infinity,
+                Infinity,
+                false,
+                newState
+              );
+
+              if (score > bestScore) {
+                bestScore = score;
+                bestPosition = node;
+              }
+            }
+          });
+
+          return bestPosition;
+        }
+
         getBestMove(state) {
           let bestMove = null;
           let bestValue = -Infinity;
@@ -630,6 +663,22 @@
             }
           }
           turn++;
+
+          const ai = new GameAI();
+
+          const currentState = {
+            pionDiPapan: pionDiPapan,
+            eatenPion: eatenPion,
+          };
+          const bestPosition = ai.getBestPositionForTiger(currentState);
+
+          if (bestPosition) {
+            bestPosition.type = "Macan";
+            macanX = bestPosition.y;
+            macanY = bestPosition.x;
+            turn++;
+          }
+
           return;
         }
 
@@ -642,6 +691,7 @@
               gerakMacan(node);
             } else {
               alert("Posisi sudah terisi!");
+              turn--;
             }
           } else {
             if (firstClick) {

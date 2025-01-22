@@ -51,6 +51,7 @@
       <div id="highlight"></div>
     </div>
     <script>
+      // Definisi Kelas classNode
       class classNode {
         constructor(x, y, id) {
           this.id = id;
@@ -198,13 +199,24 @@
         }
       };
 
+      function aiMove() {
+        const emptyNodes = jmlNode.flat().filter(node => node.type === "");
+        if (emptyNodes.length === 0) return;
+
+        const randomIndex = Math.floor(Math.random() * emptyNodes.length);
+        const selectedNode = emptyNodes[randomIndex];
+        selectedNode.type = "Orang";
+        jumlahPion--;
+        gambarUlang();
+      }
+
       $(document).ready(() => {
         setNodeRelationships(jmlNode, 5, 9);
         gambarUlang();
 
         const $highlight = $("#highlight");
         $("#rumahNya").on("mousemove", (e) => {
-          if (turn === 1) {
+          if (turn % 2 === 0) {
             const rect = e.currentTarget.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
@@ -213,16 +225,14 @@
             const y = Math.floor(mouseY / cellSize);
 
             if (
-              x >= 3 &&
-              x <= 5 &&
-              y >= 1 &&
-              y <= 3 &&
-              x + 3 <= 9 &&
-              y + 3 <= 6
+              x >= 0 &&
+              x < 9 &&
+              y >= 0 &&
+              y < 5
             ) {
               $highlight.css({
-                top: y * cellSize - cellSize + "px",
-                left: x * cellSize - cellSize + "px",
+                top: y * cellSize + "px",
+                left: x * cellSize + "px",
                 display: "block",
               });
             } else {
@@ -235,101 +245,6 @@
           $highlight.hide();
         });
       });
-
-      function minimax(board, depth, isMaximizingPlayer, alpha, beta) {
-        if (depth === 0 || checkGameOver(board)) {
-          return { score: evaluateBoard(board), position: null };
-        }
-
-        let bestMove = null;
-
-        if (isMaximizingPlayer) {
-          let maxEval = -Infinity;
-          for (const move of getAllPossibleMoves(board, "Macan")) {
-            const evaluation = minimax(
-              move.newBoard,
-              depth - 1,
-              false,
-              alpha,
-              beta
-            ).score;
-            if (evaluation > maxEval) {
-              maxEval = evaluation;
-              bestMove = { ...move, score: maxEval };
-            }
-            alpha = Math.max(alpha, evaluation);
-            if (beta <= alpha) break; // Alpha-beta pruning
-          }
-          return (
-            bestMove || { score: maxEval, position: bestMove?.position || null }
-          );
-        } else {
-          let minEval = Infinity;
-          for (const move of getAllPossibleMoves(board, "Orang")) {
-            const evaluation = minimax(
-              move.newBoard,
-              depth - 1,
-              true,
-              alpha,
-              beta
-            ).score;
-            if (evaluation < minEval) {
-              minEval = evaluation;
-              bestMove = move;
-            }
-            beta = Math.min(beta, evaluation);
-            if (beta <= alpha) break; // Alpha-beta pruning
-          }
-          return { score: minEval, position: bestMove?.position || null };
-        }
-      }
-
-      function cloneBoard(board) {
-        return board.map((row) =>
-          row.map((node) => {
-            const newNode = new classNode(node.x, node.y, node.id);
-            newNode.type = node.type;
-            return newNode;
-          })
-        );
-      }
-
-      function evaluateBoard(board) {
-        let score = 0;
-        board.flat().forEach((node) => {
-          if (node.type === "Macan") {
-            score += 15; // Nilai lebih besar untuk Macan
-            score +=
-              node.arrNode.filter((neighbor) => neighbor?.type === "Orang")
-                .length * 5; // Bonus untuk pion dekat
-          } else if (node.type === "Orang") {
-            score -= 3; // Penalti untuk setiap pion
-          }
-        });
-        return score;
-      }
-
-      function bestMove() {
-        let bestScore = -Infinity;
-        let move = null;
-        const macanNode = jmlNode[macanY][macanX];
-
-        macanNode.arrNode.forEach((neighbor) => {
-          if (neighbor && neighbor.type === "") {
-            // Simulasi gerakan macan
-            const originalType = neighbor.type;
-            neighbor.type = "Macan";
-            const score = minimax(neighbor, 3, -Infinity, Infinity, false); // 3 is the depth limit
-            neighbor.type = originalType; // Undo move
-            if (score > bestScore) {
-              bestScore = score;
-              move = neighbor;
-            }
-          }
-        });
-
-        return move;
-      }
 
       function updateTurnInfo() {
         const turnInfo = $("#turnInfo");
@@ -415,7 +330,7 @@
 
       function cekGerak(posisiAwalX, posisiAwalY, posisiAkhirX, posisiAkhirY) {
         const deltaX = posisiAkhirX - posisiAwalX;
-        const deltaY = posisiAkhirY - posisiAwalY;
+        const deltaY = posisiAkhirY - posisiAkhirY;
 
         if (deltaX === 0 && deltaY === 0) return "Tidak ada gerakan";
         if (deltaX === 0) return deltaY > 0 ? "Kanan" : "Kiri";
@@ -428,27 +343,6 @@
           : deltaY > 0
           ? "Serong Kanan Atas"
           : "Serong Kiri Atas";
-      }
-
-      function getAllPossibleMoves(board, type) {
-        const moves = [];
-        board.flat().forEach((node) => {
-          if (node.type === type) {
-            node.arrNode.forEach((neighbor) => {
-              if (neighbor && neighbor.type === "") {
-                const newBoard = cloneBoard(board);
-                newBoard[node.y][node.x].type = "";
-                newBoard[neighbor.y][neighbor.x].type = type;
-                moves.push({
-                  newBoard,
-                  x: neighbor.x,
-                  y: neighbor.y, // Tambahkan posisi (x, y)
-                });
-              }
-            });
-          }
-        });
-        return moves;
       }
 
       function MakanManusia(gerak, node, i, j) {
@@ -507,96 +401,47 @@
       }
 
       function game(i, j) {
-        const highlightX = parseInt($("#highlight").css("left")) / cellSize;
-        const highlightY = parseInt($("#highlight").css("top")) / cellSize;
         const node = jmlNode[i][j];
 
-        if (turn === 1) {
-          for (let y = highlightY; y < highlightY + 3; y++) {
-            for (let x = highlightX; x < highlightX + 3; x++) {
-              if (y >= 0 && y < 5 && x >= 0 && x < 9) {
-                jmlNode[y][x].type = "Orang";
-                jumlahPion--;
-              }
-            }
+        if (turn % 2 === 1) {
+          if (jumlahPion > 0) {
+            aiMove();
           }
           turn++;
           return;
         }
 
-        if (turn % 2 === 1) {
-          if (jumlahPion !== 0) {
+        if (turn % 2 === 0) {
+          if (macanX === 0 && macanY === 0) {
             if (node.type === "") {
-              node.type = "Orang";
-              jumlahPion--;
+              node.type = "Macan";
+              macanX = i;
+              macanY = j;
             } else {
               alert("Posisi sudah terisi!");
             }
           } else {
-            if (firstClick) {
-              pionX = i;
-              pionY = j;
-              firstClick = false;
-              turn--;
+            if (node.type === "") {
+              const tempNode = jmlNode[macanX][macanY];
+              const gerak = cekGerak(macanX, macanY, i, j);
+              const makan = MakanManusia(gerak, tempNode, i, j);
+              if (makan === "invalid") {
+                turn--;
+              } else {
+                jmlNode[macanX][macanY].type = "";
+                node.type = "Macan";
+                macanX = i;
+                macanY = j;
+                eatenPion += makan;
+                updateEatenPion(eatenPion);
+                gambarUlang();
+              }
             } else {
-              jmlNode[pionX][pionY].type = "";
-              node.type = "Orang";
-              firstClick = true;
+              alert("Posisi sudah terisi!");
             }
           }
-        } else {
-          gerakMacan();
         }
         turn++;
-      }
-
-      function firstMoveTiger(
-        board,
-        depth = 3,
-        alpha = -Infinity,
-        beta = Infinity
-      ) {
-        const result = minimax(board, depth, true, alpha, beta);
-        return result;
-      }
-
-      function gerakMacan() {
-        if (turn === 2) {
-          const bestMove = firstMoveTiger(jmlNode, 3); // Tingkat kedalaman = 3
-
-          if (bestMove) {
-            <!-- const { x, y } = bestMove.position; -->
-            const currentNode = jmlNode[macanY][macanX];
-            const nextNode = jmlNode[2][6];
-
-            currentNode.type = ""; // Hapus macan dari node saat ini
-            nextNode.type = "Macan"; // Pindahkan macan ke node baru
-            macanX = 2;
-            macanY = 6;
-
-            eatenPion += 0; // Tidak ada pion yang dimakan di langkah pertama
-          }
-        } else {
-          const bestMove = minimax(jmlNode, 3, true, -Infinity, Infinity);
-          console.log(bestMove);
-          if (bestMove && bestMove.x && bestMove.y) {
-            const y = bestMove.x;
-            const x = bestMove.y;
-            const tempNode = jmlNode[macanX][macanY];
-            const gerak = cekGerak(macanX, macanY, x, y);
-            console.log(gerak);
-            const makan = MakanManusia(gerak, tempNode, x, y);
-            console.log(makan);
-
-            if (makan !== "invalid") {
-              jmlNode[macanX][macanY].type = "";
-              jmlNode[x][y].type = "Macan";
-              macanX = x;
-              macanY = y;
-              eatenPion += makan;
-            }
-          }
-        }
       }
 
       function cekGame(i, j) {
@@ -614,10 +459,7 @@
         gambarUlang();
       }
 
-      function checkGameOver(board) {
-        // Logic to check if the game is over
-        return jumlahPion === 0 || eatenPion >= jumlahPion;
-      }
+      function cekMenang() {}
 
       function Reset() {}
     </script>
