@@ -180,7 +180,7 @@
 
       class HumanAI {
         constructor() {
-          this.maxDepth = 4;
+          this.maxDepth = 5;
         }
 
         evaluatePlacement(x, y, macanX, macanY) {
@@ -901,6 +901,8 @@
           const humanAI = new HumanAI();
           humanAI.placeInitial3x3(macanX, macanY, jmlNode); // Tempatkan pola 3x3 otomatis
           turn++; // Pindah giliran ke macan
+          jumlahPion -= 9;
+          pionDiPapan += 9;
           return;
         }
 
@@ -909,6 +911,7 @@
           if (jumlahPion > 0) {
             // HumanAI memilih langkah optimal
             const humanAI = new HumanAI();
+
             const currentState = {
               macanX: macanX,
               macanY: macanY,
@@ -917,7 +920,6 @@
             };
 
             const bestMove = humanAI.getBestMove(currentState, jmlNode); // Langkah otomatis HumanAI
-            console.log(bestMove);
             if (bestMove) {
               bestMove.type = "Orang";
               jumlahPion--;
