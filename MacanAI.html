@@ -5,56 +5,138 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Catur Macanan Tradisional</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
     <style>
-      #rumahNya {
-        position: relative;
-        width: 630px; /* 9 kolom x 70px */
-        height: 350px; /* 5 baris x 70px */
-        background-color: #f0f0f0;
-        border: 2px solid #ccc;
+      :root {
+        --board-bg: #f0d9b5;
+        --dark-square: #b58863;
+        --light-square: #f0d9b5;
+        --border-color: #8b4513;
+        --text-color: #2c1810;
+        --highlight-color: rgba(255, 255, 0, 0.4);
       }
-      .node {
-        position: absolute;
-        width: 45px;
-        height: 45px;
-        border-radius: 50%;
-        background-color: yellow;
-        border: 1px solid black;
+
+      body {
+        background: linear-gradient(45deg, #2c1810, #8b4513);
+        margin: 0;
+        padding: 20px;
+        font-family: "Arial", sans-serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .game-wrapper {
+        background: var(--board-bg);
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        border: 8px solid var(--border-color);
+      }
+
+      .info-panel {
+        background: rgba(255, 255, 255, 0.9);
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        border: 2px solid var(--border-color);
         text-align: center;
-        line-height: 45px;
-      }
-      #highlight {
-        position: absolute;
-        width: 210px; /* 3 kolom x 70px */
-        height: 210px; /* 3 baris x 70px */
-        background-color: rgba(0, 128, 255, 0.3);
-        pointer-events: none; /* Highlight tidak menghalangi klik */
-        display: none; /* Sembunyikan saat tidak digunakan */
-        z-index: 100; /* Pastikan di atas grid */
-      }
-      #turnInfo {
-        margin-bottom: 10px;
+        color: var(--text-color);
         font-size: 18px;
         font-weight: bold;
-        color: #333;
       }
-      .valid-move {
-        border: 2px dashed red;
-        background-color: rgba(255, 0, 0, 0.2);
+
+      #turnInfo,
+      #pion,
+      #pion2,
+      #eatenPion {
+        margin: 10px 0;
+        padding: 8px;
+        background: var(--light-square);
+        border-radius: 5px;
+      }
+
+      #rumahNya {
+        position: relative;
+        width: 630px;
+        height: 350px;
+        background: var(--board-bg);
+        border: 4px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .node {
+        position: absolute;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        border: 3px solid var(--border-color);
+        cursor: pointer;
+        transition: transform 0.2s ease;
+        background-size: cover !important;
+        background-position: center !important;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .node:hover {
+        transform: scale(1.1);
+      }
+
+      #highlight {
+        position: absolute;
+        width: 180px;
+        height: 180px;
+        border: 4px solid #ffd700;
+        border-radius: 10px;
+        pointer-events: none;
+        display: none;
+        box-shadow: 0 0 20px #ffd700;
+        background: var(--highlight-color);
+      }
+
+      .node[style*="man.png"] {
+        background-color: #d4a373 !important;
+      }
+
+      .node[style*="tiger.png"] {
+        background-color: #8b4513 !important;
+      }
+
+      .wood-grain {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: repeating-linear-gradient(
+          45deg,
+          rgba(139, 69, 19, 0.1),
+          rgba(139, 69, 19, 0.1) 10px,
+          rgba(139, 69, 19, 0.2) 10px,
+          rgba(139, 69, 19, 0.2) 20px
+        );
+        pointer-events: none;
       }
     </style>
   </head>
   <body>
-    <div id="turnInfo">Giliran: Pemain 1 (Orang)</div>
-    <br />
-    <div id="pion">Jumlah Pion: 21</div>
-    <br />
-    <div id="pion2">Pion Di Papan: 0</div>
-    <br />
-    <div id="eatenPion">Pion yang dimakan: 0</div>
-    <div id="rumahNya">
-      <canvas id="canvasLayer"></canvas>
-      <div id="highlight"></div>
+    <div class="game-wrapper">
+      <div class="info-panel">
+        <div>Player vs Macan (AI)</div>
+        <div id="turnInfo">Giliran: Pemain 1 (Orang)</div>
+        <div id="pion">Jumlah Pion: 21</div>
+        <div id="pion2">Pion Di Papan: 0</div>
+        <div id="eatenPion">Pion yang dimakan: 0</div>
+      </div>
+      <div id="rumahNya">
+        <div class="wood-grain"></div>
+        <canvas id="canvasLayer"></canvas>
+        <div id="highlight"></div>
+      </div>
     </div>
     <script>
       // Definisi Kelas classNode
@@ -294,7 +376,7 @@
         if (turn % 2 === 1) {
           turnInfo.text("Giliran: Pemain 1 (Orang)");
         } else {
-          turnInfo.text("Giliran: Pemain 2 (Macan)");
+          turnInfo.text("Giliran: AI (Macan)");
         }
       }
 
