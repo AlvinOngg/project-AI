@@ -17,6 +17,24 @@
         --text-color: #2c1810;
         --highlight-color: rgba(255, 255, 0, 0.4);
       }
+      .back-button {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: #8b4513;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        font-weight: bold;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      .back-button:hover {
+        background: #a0522d;
+      }
 
       body {
         background: linear-gradient(45deg, #2c1810, #8b4513);
@@ -125,6 +143,9 @@
   </head>
   <body>
     <div class="game-wrapper">
+      <button id="backButton" class="back-button" onclick="goBack()">
+        Back
+      </button>
       <div class="info-panel">
         <div>Player vs Macan (AI)</div>
         <div id="turnInfo">Giliran: Pemain 1 (Orang)</div>
@@ -770,7 +791,6 @@
               node.type = "Orang";
               jumlahPion--;
               pionDiPapan++;
-              gerakMacan(node);
             } else {
               alert("Posisi sudah terisi!");
               turn--;
@@ -785,27 +805,11 @@
               jmlNode[pionX][pionY].type = "";
               node.type = "Orang";
               firstClick = true;
-              gerakMacan(node);
-            }
-          }
-        } else {
-          if (
-            macanX === 0 &&
-            macanY === 0 &&
-            jmlNode[macanX][macanY].type !== "Macan"
-          ) {
-            if (node.type === "") {
-              node.type = "Macan";
-              macanX = i;
-              macanY = j;
-            } else {
-              alert("Posisi sudah terisi!");
-              turn--;
-              return;
             }
           }
         }
         turn++;
+        gerakMacan(node);
       }
 
       function gerakMacan(node) {
@@ -894,6 +898,14 @@
 
       function Reset() {
         location.reload();
+      }
+
+      function goBack() {
+        window.location.href = "home.html";
+      }
+
+      function delay(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
       }
     </script>
   </body>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Halaman Awal</title>
+    <style>
+      body {
+        font-family: "Poppins", sans-serif;
+        background: linear-gradient(to right, #4a2c16, #8c5b32);
+        text-align: center;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        margin-top: 100px;
+        animation: fadeIn 1.5s ease-in-out;
+      }
+      h1 {
+        color: #fff;
+        font-size: 3rem;
+        text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+      }
+      .menu-button {
+        background: linear-gradient(to right, #d4a017, #f7c14f);
+        color: #fff;
+        border: none;
+        padding: 20px 40px;
+        font-size: 24px;
+        cursor: pointer;
+        border-radius: 50px;
+        margin: 20px;
+        width: 300px;
+        box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease-in-out;
+      }
+      .menu-button:hover {
+        background: linear-gradient(to right, #b88a0a, #e0a20e);
+        transform: translateY(-5px);
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Selamat Datang di Permainan Macanan</h1>
+      <button class="menu-button" onclick="window.location.href='Index.html'">
+        Player vs Player
+      </button>
+      <button class="menu-button" onclick="window.location.href='MacanAI.html'">
+        Macan vs AI
+      </button>
+      <button class="menu-button" onclick="window.location.href='OrangAI.html'">
+        Uwong vs AI
+      </button>
+    </div>
+  </body>
+</html>

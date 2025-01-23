@@ -17,6 +17,24 @@
         --text-color: #2c1810;
         --highlight-color: rgba(255, 255, 0, 0.4);
       }
+      .back-button {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: #8b4513;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        font-weight: bold;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      .back-button:hover {
+        background: #a0522d;
+      }
 
       body {
         background: linear-gradient(45deg, #2c1810, #8b4513);
@@ -125,7 +143,11 @@
   </head>
   <body>
     <div class="game-wrapper">
+      <button id="backButton" class="back-button" onclick="goBack()">
+        Back
+      </button>
       <div class="info-panel">
+        <div>Player vs Orang (AI)</div>
         <div id="turnInfo">Giliran: Pemain 1 (Orang)</div>
         <div id="pion">Jumlah Pion: 21</div>
         <div id="pion2">Pion Di Papan: 0</div>
@@ -196,7 +218,7 @@
           // Heavy penalty for positions too close to tiger
           const distanceFromTiger = Math.abs(x - macanX) + Math.abs(y - macanY);
           if (distanceFromTiger <= 2) {
-            score -= 500;
+            score -= 1000; // Increase penalty for proximity to tiger
           }
 
           // Bonus for positions that could help form defensive lines
@@ -317,12 +339,12 @@
 
               // Penalize vulnerable pieces
               if (vulnerableToTiger) {
-                score -= 750;
+                score -= 1500; // Increase penalty for vulnerability to tiger
               }
 
               // Heavy penalty for isolated pieces
               if (protectedCount === 0) {
-                score -= 300;
+                score -= 500; // Increase penalty for lack of protection
               }
             }
           });
@@ -336,7 +358,7 @@
 
           validMovesForTiger.forEach((move) => {
             if (move.canCapture) {
-              score -= 1000 * move.captureCount;
+              score -= 2000 * move.captureCount; // Increase penalty for tiger's capture potential
             }
           });
 
@@ -344,7 +366,7 @@
           score -= validMovesForTiger.length * 40;
 
           // Consider eaten pieces
-          score -= state.eatenPion * 1000;
+          score -= state.eatenPion * 1500; // Increase penalty for eaten pieces
 
           return score;
         }
@@ -531,6 +553,52 @@
             console.error("No valid moves available");
             return null;
           }
+        }
+
+        /**
+         * Move one existing pion to the best empty position.
+         */
+        movePionToBestPosition(state, jmlNode) {
+          let bestScore = -Infinity;
+          let bestMove = null;
+          let sourceNode = null;
+
+          // Iterate through all pions on the board
+          for (const node of jmlNode.flat()) {
+            if (node.type === "Orang") {
+              // Try moving this pion to all empty positions
+              for (const emptyNode of this.getPossibleMoves(jmlNode)) {
+                // Make the move temporarily
+                const oldType = emptyNode.type;
+                emptyNode.type = "Orang";
+                node.type = "";
+
+                // Evaluate the board
+                const score = this.evaluateBoard(state, jmlNode);
+
+                // Restore the original state
+                emptyNode.type = oldType;
+                node.type = "Orang";
+
+                // Update the best move if this one is better
+                if (score > bestScore) {
+                  bestScore = score;
+                  bestMove = emptyNode;
+                  sourceNode = node;
+                }
+              }
+            }
+          }
+
+          // Execute the best move
+          if (bestMove && sourceNode) {
+            sourceNode.type = "";
+            bestMove.type = "Orang";
+          } else {
+            console.error("No valid moves for repositioning available");
+          }
+
+          return { jmlNode, state };
         }
       }
 
@@ -927,15 +995,16 @@
             }
           } else {
             // Jika semua pion sudah ditempatkan, pindahkan pion manusia
-            if (firstClick) {
-              pionX = i;
-              pionY = j;
-              firstClick = false;
-              turn--; // Tetap di giliran yang sama untuk klik kedua
-            } else {
-              jmlNode[pionX][pionY].type = ""; // Hapus pion dari posisi awal
-              node.type = "Orang"; // Pindahkan pion ke posisi baru
-              firstClick = true;
+            const humanAI = new HumanAI();
+            const currentState = {
+              macanX: macanX,
+              macanY: macanY,
+              pionDiPapan: pionDiPapan,
+              eatenPion: eatenPion,
+            };
+            const move = humanAI.movePionToBestPosition(currentState, jmlNode);
+            if (move) {
+              console.log(move);
             }
           }
         }
@@ -1020,6 +1089,10 @@
 
       function Reset() {
         location.reload();
+      }
+
+      function goBack() {
+        window.location.href = "home.html";
       }
     </script>
   </body>
