@@ -1,3 +1,4 @@
+// Definisi Kelas classNode
 class classNode {
   constructor(x, y, id) {
     this.id = id;
@@ -38,7 +39,7 @@ class classNode {
 }
 
 const cellSize = 70;
-const jmlNode = Array(5)
+let jmlNode = Array(5)
   .fill(null)
   .map((_, y) =>
     Array(9)
@@ -54,6 +55,7 @@ let eatenPion = 0;
 let firstClick = true;
 let pionX = 0;
 let pionY = 0;
+let pionDiPapan = 0;
 
 const setNodeRelationships = (grid, rows, cols) => {
   const setNode = (node, direction, y, x) => {
@@ -144,8 +146,9 @@ const setNodeRelationships = (grid, rows, cols) => {
 };
 
 $(document).ready(() => {
+  let a = null;
   setNodeRelationships(jmlNode, 5, 9);
-  gambarUlang();
+  gambarUlang(a);
 
   const $highlight = $("#highlight");
   $("#rumahNya").on("mousemove", (e) => {
@@ -174,97 +177,48 @@ $(document).ready(() => {
   });
 });
 
-function minimax(board, depth, isMaximizingPlayer, alpha, beta) {
-  if (depth === 0 || checkGameOver(board)) {
-    return { score: evaluateBoard(board), position: null };
-  }
+function findValidMovesAndCount(macanX, macanY) {
+  const macanNode = jmlNode[macanX][macanY];
+  const validMoves = [];
 
-  let bestMove = null;
+  const directionMap = [
+    "topNode",
+    "bottomNode",
+    "leftNode",
+    "rightNode",
+    "topRightNode",
+    "topLeftNode",
+    "bottomLeftNode",
+    "bottomRightNode",
+  ];
 
-  if (isMaximizingPlayer) {
-    let maxEval = -Infinity;
-    for (const move of getAllPossibleMoves(board, "Macan")) {
-      const evaluation = minimax(
-        move.newBoard,
-        depth - 1,
-        false,
-        alpha,
-        beta
-      ).score;
-      if (evaluation > maxEval) {
-        maxEval = evaluation;
-        bestMove = { ...move, score: maxEval };
-      }
-      alpha = Math.max(alpha, evaluation);
-      if (beta <= alpha) break; // Alpha-beta pruning
-    }
-    return bestMove || { score: maxEval, position: bestMove?.position || null };
-  } else {
-    let minEval = Infinity;
-    for (const move of getAllPossibleMoves(board, "Orang")) {
-      const evaluation = minimax(
-        move.newBoard,
-        depth - 1,
-        true,
-        alpha,
-        beta
-      ).score;
-      if (evaluation < minEval) {
-        minEval = evaluation;
-        bestMove = move;
-      }
-      beta = Math.min(beta, evaluation);
-      if (beta <= alpha) break; // Alpha-beta pruning
-    }
-    return { score: minEval, position: bestMove?.position || null };
-  }
-}
+  macanNode.arrNode.forEach((neighbor, index) => {
+    if (!neighbor) return;
 
-function cloneBoard(board) {
-  return board.map((row) =>
-    row.map((node) => {
-      const newNode = new classNode(node.x, node.y, node.id);
-      newNode.type = node.type;
-      return newNode;
-    })
-  );
-}
+    if (neighbor.type === "") {
+      validMoves.push({ node: neighbor, orangCount: 0 });
+    } else if (neighbor.type === "Orang") {
+      const direction = directionMap[index];
+      let currentNode = neighbor[direction];
+      let orangCount = 1;
 
-function evaluateBoard(board) {
-  let score = 0;
-  board.flat().forEach((node) => {
-    if (node.type === "Macan") {
-      score += 15; // Nilai lebih besar untuk Macan
-      score +=
-        node.arrNode.filter((neighbor) => neighbor?.type === "Orang").length *
-        5; // Bonus untuk pion dekat
-    } else if (node.type === "Orang") {
-      score -= 3; // Penalti untuk setiap pion
-    }
-  });
-  return score;
-}
-
-function bestMove() {
-  let bestScore = -Infinity;
-  let move = null;
-  const macanNode = jmlNode[macanY][macanX];
-
-  macanNode.arrNode.forEach((neighbor) => {
-    if (neighbor && neighbor.type === "") {
-      // Simulasi gerakan macan
-      const originalType = neighbor.type;
-      neighbor.type = "Macan";
-      const score = minimax(neighbor, 3, -Infinity, Infinity, false); // 3 is the depth limit
-      neighbor.type = originalType; // Undo move
-      if (score > bestScore) {
-        bestScore = score;
-        move = neighbor;
+      while (currentNode) {
+        if (currentNode.type === "") {
+          if (orangCount % 2 !== 0) {
+            validMoves.push({ node: currentNode, orangCount });
+          }
+          break;
+        } else if (currentNode.type === "Orang") {
+          orangCount++;
+          currentNode = currentNode[direction];
+        } else {
+          break;
+        }
       }
     }
   });
 
-  return move;
+  return validMoves;
 }
 
 function updateTurnInfo() {
@@ -276,7 +230,7 @@ function updateTurnInfo() {
   }
 }
 
-function gambarUlang() {
+function gambarUlang(validMoves) {
   const canvas = document.getElementById("canvasLayer");
   const ctx = canvas.getContext("2d");
   canvas.width = 630; // Lebar grid
@@ -288,8 +242,8 @@ function gambarUlang() {
   // Gambar garis antara node yang terhubung
   ctx.strokeStyle = "#000"; // Warna garis
   ctx.lineWidth = 2; // Ketebalan garis
-  jmlNode.flat().forEach((node) => {
-    const { x, y, arrNode } = node;
+
+  jmlNode.flat().forEach(({ x, y, arrNode }) => {
     const startX = x * cellSize + cellSize / 2;
     const startY = y * cellSize + cellSize / 2;
 
@@ -305,35 +259,41 @@ function gambarUlang() {
     });
   });
 
-  // Gambar ulang node
-  $("#rumahNya").find(".node, #highlight").remove();
-  $("#rumahNya").append('<div id="highlight"></div>');
-  jmlNode.flat().forEach((node) => {
-    const { x, y, type } = node;
+  // Clear and redraw nodes
+  const rumahNya = $("#rumahNya");
+  rumahNya.find(".node, #highlight").remove();
+  rumahNya.append('<div id="highlight"></div>');
+
+  jmlNode.flat().forEach(({ x, y, type, id }) => {
     if (
       !(
-        (y == 0 && x == 1) ||
-        (y == 4 && x == 1) ||
-        (y == 1 && x == 0) ||
-        (y == 3 && x == 0) ||
-        (y == 1 && x == 8) ||
-        (y == 3 && x == 8) ||
-        (y == 4 && x == 7) ||
-        (y == 0 && x == 7)
+        (y === 0 && x === 1) ||
+        (y === 4 && x === 1) ||
+        (y === 1 && x === 0) ||
+        (y === 3 && x === 0) ||
+        (y === 1 && x === 8) ||
+        (y === 3 && x === 8) ||
+        (y === 4 && x === 7) ||
+        (y === 0 && x === 7)
       )
     ) {
-      let backgroundImage = "";
-      if (type == "Orang")
-        backgroundImage = 'background-image: url("man.png");';
-      else if (type == "Macan")
-        backgroundImage = 'background-image: url("tiger.png");';
+      let backgroundColor = "background-color: yellow;";
+      if (validMoves?.some((node) => id === node.node.id)) {
+        backgroundColor = "background-color: red;";
+      }
 
-      $("#rumahNya").append(
-        `<div onclick='cekGame(${y}, ${x})' style='top:${
-          y * cellSize
-        }px; left:${
-          x * cellSize
-        }px; ${backgroundImage} background-size:cover;' class='node'></div>`
+      const backgroundImage =
+        type === "Orang"
+          ? 'background-image: url("man.png");'
+          : type === "Macan"
+          ? 'background-image: url("tiger.png");'
+          : "";
+
+      rumahNya.append(
+        `<div onclick='cekGame(${y}, ${x})'
+                          style='top:${y * cellSize}px; left:${x * cellSize}px;
+                                 ${backgroundImage} ${backgroundColor} background-size:cover;'
+                          class='node' data-x='${x}' data-y='${y}'></div>`
       );
     }
   });
@@ -342,6 +302,11 @@ function gambarUlang() {
 function updatePion(pion) {
   const pions = $("#pion");
   pions.text("Jumlah Pion: " + pion);
+}
+
+function updatePionDiPapan(pionDiPapan) {
+  const pions = $("#pion2");
+  pions.text("Pion Di Papan : " + pionDiPapan);
 }
 
 function updateEatenPion(eaten) {
@@ -364,27 +329,6 @@ function cekGerak(posisiAwalX, posisiAwalY, posisiAkhirX, posisiAkhirY) {
     : deltaY > 0
     ? "Serong Kanan Atas"
     : "Serong Kiri Atas";
-}
-
-function getAllPossibleMoves(board, type) {
-  const moves = [];
-  board.flat().forEach((node) => {
-    if (node.type === type) {
-      node.arrNode.forEach((neighbor) => {
-        if (neighbor && neighbor.type === "") {
-          const newBoard = cloneBoard(board);
-          newBoard[node.y][node.x].type = "";
-          newBoard[neighbor.y][neighbor.x].type = type;
-          moves.push({
-            newBoard,
-            x: neighbor.x,
-            y: neighbor.y, // Tambahkan posisi (x, y)
-          });
-        }
-      });
-    }
-  });
-  return moves;
 }
 
 function MakanManusia(gerak, node, i, j) {
@@ -442,6 +386,184 @@ function MakanManusia(gerak, node, i, j) {
   return "invalid";
 }
 
+class GameAI {
+  constructor() {
+    this.maxDepth = 4;
+  }
+
+  evaluateBoard(state) {
+    let score = 0;
+
+    // Heavily reward eating pawns
+    score += state.eatenPion * 150;
+
+    // Center control is important
+    const centerX = 4;
+    const centerY = 2;
+    const distanceFromCenter =
+      Math.abs(state.macanY - centerX) + Math.abs(state.macanX - centerY);
+
+    // Stronger penalty for being away from center
+    score -= distanceFromCenter * 15;
+
+    // Reward positions that control multiple directions
+    const validMoves = findValidMovesAndCount(state.macanX, state.macanY);
+    score += validMoves.length * 20;
+
+    // Reward positions that threaten multiple pawns
+    const threatCount = validMoves.reduce(
+      (acc, move) => acc + (move.orangCount > 0 ? 1 : 0),
+      0
+    );
+    score += threatCount * 30;
+
+    // Penalize if too many pawns are on board
+    score -= state.pionDiPapan * 20;
+
+    // Extra reward for getting close to winning condition
+    if (state.pionDiPapan + (21 - state.eatenPion) < 15) {
+      score += 200;
+    }
+
+    return score;
+  }
+
+  minimax(depth, alpha, beta, isMaximizing, state) {
+    if (depth === 0) {
+      return this.evaluateBoard(state);
+    }
+
+    if (isMaximizing) {
+      let maxEval = -Infinity;
+      const validMoves = findValidMovesAndCount(state.macanX, state.macanY);
+
+      // Sort moves to improve alpha-beta pruning
+      validMoves.sort((a, b) => b.orangCount - a.orangCount);
+
+      if (validMoves.length === 0) return -10000;
+
+      for (const move of validMoves) {
+        const newState = {
+          macanX: move.node.y,
+          macanY: move.node.x,
+          pionDiPapan: state.pionDiPapan - move.orangCount,
+          eatenPion: state.eatenPion + move.orangCount,
+        };
+
+        const evalScore = this.minimax(depth - 1, alpha, beta, false, newState);
+        maxEval = Math.max(maxEval, evalScore);
+        alpha = Math.max(alpha, evalScore);
+
+        if (beta <= alpha) break;
+      }
+      return maxEval;
+    } else {
+      let minEval = Infinity;
+      // Consider more sophisticated human moves
+      const possibleMoves = this.getAdvancedHumanMoves(state);
+
+      if (possibleMoves.length === 0) return 10000;
+
+      for (const move of possibleMoves) {
+        const newState = {
+          ...state,
+          pionDiPapan: Math.min(state.pionDiPapan + 1, 21),
+        };
+
+        const evalScore = this.minimax(depth - 1, alpha, beta, true, newState);
+        minEval = Math.min(minEval, evalScore);
+        beta = Math.min(beta, evalScore);
+
+        if (beta <= alpha) break;
+      }
+      return minEval;
+    }
+  }
+
+  getAdvancedHumanMoves(state) {
+    const moves = [];
+    // Consider all possible positions where human can place pawns
+    for (let i = 0; i < 5; i++) {
+      for (let j = 0; j < 9; j++) {
+        if (jmlNode[i][j].type === "") {
+          moves.push({ x: i, y: j });
+        }
+      }
+    }
+    return moves;
+  }
+
+  getBestPositionForTiger(state) {
+    let bestScore = -Infinity;
+    let bestPosition = null;
+
+    jmlNode.flat().forEach((node) => {
+      if (node.type === "") {
+        // Create a temporary state reflecting the tiger being placed at the current node
+        const newState = {
+          macanX: node.y,
+          macanY: node.x,
+          pionDiPapan: state.pionDiPapan,
+          eatenPion: state.eatenPion,
+        };
+
+        // Evaluate the position using minimax
+        const score = this.minimax(
+          this.maxDepth,
+          -Infinity,
+          Infinity,
+          false,
+          newState
+        );
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestPosition = node;
+        }
+      }
+    });
+
+    return bestPosition;
+  }
+
+  getBestMove(state) {
+    let bestMove = null;
+    let bestValue = -Infinity;
+    const validMoves = findValidMovesAndCount(state.macanX, state.macanY);
+
+    // Sort moves to improve alpha-beta pruning
+    validMoves.sort((a, b) => b.orangCount - a.orangCount);
+
+    for (const move of validMoves) {
+      const newState = {
+        macanX: move.node.y,
+        macanY: move.node.x,
+        pionDiPapan: state.pionDiPapan - move.orangCount,
+        eatenPion: state.eatenPion + move.orangCount,
+      };
+
+      const moveValue = this.minimax(
+        this.maxDepth,
+        -Infinity,
+        Infinity,
+        false,
+        newState
+      );
+
+      // Prioritize moves that eat pawns when scores are equal
+      if (
+        moveValue > bestValue ||
+        (moveValue === bestValue && move.orangCount > 0)
+      ) {
+        bestValue = moveValue;
+        bestMove = move;
+      }
+    }
+
+    return bestMove;
+  }
+}
+
 function game(i, j) {
   const highlightX = parseInt($("#highlight").css("left")) / cellSize;
   const highlightY = parseInt($("#highlight").css("top")) / cellSize;
@@ -453,10 +575,27 @@ function game(i, j) {
         if (y >= 0 && y < 5 && x >= 0 && x < 9) {
           jmlNode[y][x].type = "Orang";
           jumlahPion--;
+          pionDiPapan++;
         }
       }
     }
     turn++;
+
+    const ai = new GameAI();
+
+    const currentState = {
+      pionDiPapan: pionDiPapan,
+      eatenPion: eatenPion,
+    };
+    const bestPosition = ai.getBestPositionForTiger(currentState);
+
+    if (bestPosition) {
+      bestPosition.type = "Macan";
+      macanX = bestPosition.y;
+      macanY = bestPosition.x;
+      turn++;
+    }
+
     return;
   }
 
@@ -465,8 +604,11 @@ function game(i, j) {
       if (node.type === "") {
         node.type = "Orang";
         jumlahPion--;
+        pionDiPapan++;
+        gerakMacan(node);
       } else {
         alert("Posisi sudah terisi!");
+        turn--;
       }
     } else {
       if (firstClick) {
@@ -478,51 +620,70 @@ function game(i, j) {
         jmlNode[pionX][pionY].type = "";
         node.type = "Orang";
         firstClick = true;
+        gerakMacan(node);
       }
     }
   } else {
-    gerakMacan();
+    if (
+      macanX === 0 &&
+      macanY === 0 &&
+      jmlNode[macanX][macanY].type !== "Macan"
+    ) {
+      if (node.type === "") {
+        node.type = "Macan";
+        macanX = i;
+        macanY = j;
+      } else {
+        alert("Posisi sudah terisi!");
+        turn--;
+        return;
+      }
+    }
   }
   turn++;
 }
 
-function firstMoveTiger(board, depth = 3, alpha = -Infinity, beta = Infinity) {
-  const result = minimax(board, depth, true, alpha, beta);
-  return result;
-}
+function gerakMacan(node) {
+  const ai = new GameAI();
+  const currentState = {
+    macanX: macanX,
+    macanY: macanY,
+    pionDiPapan: pionDiPapan,
+    eatenPion: eatenPion,
+  };
 
-function gerakMacan() {
-  if (turn === 2) {
-    const bestMove = firstMoveTiger(jmlNode, 3); // Tingkat kedalaman = 3
-    if (bestMove && bestMove.position) {
-      const { x, y } = bestMove.position;
-      const currentNode = jmlNode[macanY][macanX];
-      const nextNode = jmlNode[y][x];
+  const bestMove = ai.getBestMove(currentState);
 
-      currentNode.type = ""; // Hapus macan dari node saat ini
-      nextNode.type = "Macan"; // Pindahkan macan ke node baru
-      macanX = x;
-      macanY = y;
+  if (bestMove) {
+    const tempNode = jmlNode[macanX][macanY];
+    const gerak = cekGerak(macanX, macanY, bestMove.node.y, bestMove.node.x);
+    const makan = MakanManusia(
+      gerak,
+      tempNode,
+      bestMove.node.y,
+      bestMove.node.x
+    );
 
-      eatenPion += 0; // Tidak ada pion yang dimakan di langkah pertama
+    if (makan !== "invalid") {
+      jmlNode[macanX][macanY].type = "";
+      jmlNode[bestMove.node.y][bestMove.node.x].type = "Macan";
+      macanX = bestMove.node.y;
+      macanY = bestMove.node.x;
+      eatenPion += makan;
+      pionDiPapan -= makan;
+
+      if (pionDiPapan + jumlahPion < 14) {
+        cekMenang("Macan");
+      }
+    } else {
+      turn--;
+      return;
     }
   } else {
-    const bestMove = minimax(jmlNode, 3, true, -Infinity, Infinity);
-    if (bestMove && bestMove.position) {
-      const { x, y } = bestMove.position;
-      const tempNode = jmlNode[macanX][macanY];
-      const gerak = cekGerak(macanX, macanY, x, y);
-      const makan = MakanManusia(gerak, tempNode, x, y);
-
-      if (makan !== "invalid") {
-        jmlNode[macanX][macanY].type = "";
-        jmlNode[x][y].type = "Macan";
-        macanX = x;
-        macanY = y;
-        eatenPion += makan;
-      }
-    }
+    turn--;
+    return;
   }
+  turn++;
 }
 
 function cekGame(i, j) {
@@ -533,16 +694,34 @@ function cekGame(i, j) {
 
   game(i, j);
 
-  alert("Posisi : (" + i + "," + j + ")");
+  let validMoves = null;
+  gambarUlang(validMoves);
+
+  if (turn % 2 == 1 && turn != 2) {
+    validMoves = findValidMovesAndCount(macanX, macanY);
+    if (validMoves.length == 0) {
+      cekMenang("Orang");
+    }
+  }
   updateTurnInfo();
   updatePion(jumlahPion);
   updateEatenPion(eatenPion);
-  gambarUlang();
+  updatePionDiPapan(pionDiPapan);
 }
 
-function checkGameOver(board) {
-  // Logic to check if the game is over
-  return jumlahPion === 0 || eatenPion >= jumlahPion;
+function cekMenang(type) {
+  gambarUlang(null);
+  if (type == "Orang") {
+    alert("Orang Menang");
+    Reset();
+  }
+
+  if (type == "Macan") {
+    alert("Macan Menang");
+    Reset();
+  }
 }
 
-function Reset() {}
+function Reset() {
+  location.reload();
+}

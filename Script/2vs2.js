@@ -1,3 +1,4 @@
+// Definisi Kelas classNode
 class classNode {
   constructor(x, y, id) {
     this.id = id;
@@ -38,7 +39,7 @@ class classNode {
 }
 
 const cellSize = 70;
-const jmlNode = Array(5)
+let jmlNode = Array(5)
   .fill(null)
   .map((_, y) =>
     Array(9)
@@ -54,6 +55,7 @@ let eatenPion = 0;
 let firstClick = true;
 let pionX = 0;
 let pionY = 0;
+let pionDiPapan = 0;
 
 const setNodeRelationships = (grid, rows, cols) => {
   const setNode = (node, direction, y, x) => {
@@ -144,8 +146,9 @@ const setNodeRelationships = (grid, rows, cols) => {
 };
 
 $(document).ready(() => {
+  let a = null;
   setNodeRelationships(jmlNode, 5, 9);
-  gambarUlang();
+  gambarUlang(a);
 
   const $highlight = $("#highlight");
   $("#rumahNya").on("mousemove", (e) => {
@@ -174,6 +177,50 @@ $(document).ready(() => {
   });
 });
 
+function findValidMovesAndCount(macanX, macanY) {
+  const macanNode = jmlNode[macanX][macanY];
+  const validMoves = [];
+
+  const directionMap = [
+    "topNode",
+    "bottomNode",
+    "leftNode",
+    "rightNode",
+    "topRightNode",
+    "topLeftNode",
+    "bottomLeftNode",
+    "bottomRightNode",
+  ];
+
+  macanNode.arrNode.forEach((neighbor, index) => {
+    if (!neighbor) return;
+
+    if (neighbor.type === "") {
+      validMoves.push({ node: neighbor, orangCount: 0 });
+    } else if (neighbor.type === "Orang") {
+      const direction = directionMap[index];
+      let currentNode = neighbor[direction];
+      let orangCount = 1;
+
+      while (currentNode) {
+        if (currentNode.type === "") {
+          if (orangCount % 2 !== 0) {
+            validMoves.push({ node: currentNode, orangCount });
+          }
+          break;
+        } else if (currentNode.type === "Orang") {
+          orangCount++;
+          currentNode = currentNode[direction];
+        } else {
+          break;
+        }
+      }
+    }
+  });
+
+  return validMoves;
+}
+
 function updateTurnInfo() {
   const turnInfo = $("#turnInfo");
   if (turn % 2 === 1) {
@@ -183,7 +230,7 @@ function updateTurnInfo() {
   }
 }
 
-function gambarUlang() {
+function gambarUlang(validMoves) {
   const canvas = document.getElementById("canvasLayer");
   const ctx = canvas.getContext("2d");
   canvas.width = 630; // Lebar grid
@@ -195,8 +242,8 @@ function gambarUlang() {
   // Gambar garis antara node yang terhubung
   ctx.strokeStyle = "#000"; // Warna garis
   ctx.lineWidth = 2; // Ketebalan garis
-  jmlNode.flat().forEach((node) => {
-    const { x, y, arrNode } = node;
+
+  jmlNode.flat().forEach(({ x, y, arrNode }) => {
     const startX = x * cellSize + cellSize / 2;
     const startY = y * cellSize + cellSize / 2;
 
@@ -212,35 +259,41 @@ function gambarUlang() {
     });
   });
 
-  // Gambar ulang node
-  $("#rumahNya").find(".node, #highlight").remove();
-  $("#rumahNya").append('<div id="highlight"></div>');
-  jmlNode.flat().forEach((node) => {
-    const { x, y, type } = node;
+  // Clear and redraw nodes
+  const rumahNya = $("#rumahNya");
+  rumahNya.find(".node, #highlight").remove();
+  rumahNya.append('<div id="highlight"></div>');
+
+  jmlNode.flat().forEach(({ x, y, type, id }) => {
     if (
       !(
-        (y == 0 && x == 1) ||
-        (y == 4 && x == 1) ||
-        (y == 1 && x == 0) ||
-        (y == 3 && x == 0) ||
-        (y == 1 && x == 8) ||
-        (y == 3 && x == 8) ||
-        (y == 4 && x == 7) ||
-        (y == 0 && x == 7)
+        (y === 0 && x === 1) ||
+        (y === 4 && x === 1) ||
+        (y === 1 && x === 0) ||
+        (y === 3 && x === 0) ||
+        (y === 1 && x === 8) ||
+        (y === 3 && x === 8) ||
+        (y === 4 && x === 7) ||
+        (y === 0 && x === 7)
       )
     ) {
-      let backgroundImage = "";
-      if (type == "Orang")
-        backgroundImage = 'background-image: url("man.png");';
-      else if (type == "Macan")
-        backgroundImage = 'background-image: url("tiger.png");';
+      let backgroundColor = "background-color: yellow;";
+      if (validMoves?.some((node) => id === node.node.id)) {
+        backgroundColor = "background-color: red;";
+      }
 
-      $("#rumahNya").append(
-        `<div onclick='cekGame(${y}, ${x})' style='top:${
-          y * cellSize
-        }px; left:${
-          x * cellSize
-        }px; ${backgroundImage} background-size:cover;' class='node'></div>`
+      const backgroundImage =
+        type === "Orang"
+          ? 'background-image: url("man.png");'
+          : type === "Macan"
+          ? 'background-image: url("tiger.png");'
+          : "";
+
+      rumahNya.append(
+        `<div onclick='cekGame(${y}, ${x})' 
+                    style='top:${y * cellSize}px; left:${x * cellSize}px; 
+                           ${backgroundImage} ${backgroundColor} background-size:cover;' 
+                    class='node' data-x='${x}' data-y='${y}'></div>`
       );
     }
   });
@@ -249,6 +302,11 @@ function gambarUlang() {
 function updatePion(pion) {
   const pions = $("#pion");
   pions.text("Jumlah Pion: " + pion);
+}
+
+function updatePionDiPapan(pionDiPapan) {
+  const pions = $("#pion2");
+  pions.text("Pion Di Papan : " + pionDiPapan);
 }
 
 function updateEatenPion(eaten) {
@@ -339,6 +397,7 @@ function game(i, j) {
         if (y >= 0 && y < 5 && x >= 0 && x < 9) {
           jmlNode[y][x].type = "Orang";
           jumlahPion--;
+          pionDiPapan++;
         }
       }
     }
@@ -351,6 +410,7 @@ function game(i, j) {
       if (node.type === "") {
         node.type = "Orang";
         jumlahPion--;
+        pionDiPapan++;
       } else {
         alert("Posisi sudah terisi!");
       }
@@ -367,7 +427,7 @@ function game(i, j) {
       }
     }
   } else {
-    if (macanX === 0 && macanY === 0) {
+    if (turn == 2) {
       if (node.type === "") {
         node.type = "Macan";
         macanX = i;
@@ -388,6 +448,13 @@ function game(i, j) {
           macanX = i;
           macanY = j;
           eatenPion += makan;
+          pionDiPapan -= makan;
+
+          let totalPion = pionDiPapan + jumlahPion;
+          console.log(totalPion);
+          if (totalPion < 14) {
+            cekMenang("Macan");
+          }
         }
       } else {
         alert("Posisi sudah terisi!");
@@ -405,13 +472,36 @@ function cekGame(i, j) {
 
   game(i, j);
 
-  alert("Posisi : (" + i + "," + j + ")");
+  let validMoves = null;
+
+  if (turn % 2 == 0 && turn != 2) {
+    validMoves = findValidMovesAndCount(macanX, macanY);
+    if (validMoves.length == 0) {
+      cekMenang("Orang");
+    }
+  } else {
+    validMoves = null;
+  }
   updateTurnInfo();
   updatePion(jumlahPion);
   updateEatenPion(eatenPion);
-  gambarUlang();
+  updatePionDiPapan(pionDiPapan);
+  gambarUlang(validMoves);
 }
 
-function cekMenang() {}
+function cekMenang(type) {
+  if (type == "Orang") {
+    alert("Orang Menang");
+    Reset();
+  }
 
-function Reset() {}
+  if (type == "Macan") {
+    console.log("test");
+    alert("Macan Menang");
+    Reset();
+  }
+}
+
+function Reset() {
+  location.reload();
+}
