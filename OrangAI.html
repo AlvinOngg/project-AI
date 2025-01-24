@@ -203,6 +203,19 @@
       class HumanAI {
         constructor() {
           this.maxDepth = 5;
+          this.defensiveLines = [
+            { x: 3, y: 1 },
+            { x: 4, y: 1 },
+            { x: 5, y: 1 },
+            { x: 2, y: 2 },
+            { x: 3, y: 2 },
+            { x: 4, y: 2 },
+            { x: 5, y: 2 },
+            { x: 6, y: 2 },
+            { x: 3, y: 3 },
+            { x: 4, y: 3 },
+            { x: 5, y: 3 },
+          ];
         }
 
         evaluatePlacement(x, y, macanX, macanY) {
@@ -210,21 +223,27 @@
           const centerX = 4;
           const centerY = 2;
 
-          // Evaluate distance from center
+          // Evaluasi jarak dari pusat
           const distanceFromCenter =
             Math.abs(x - centerX) + Math.abs(y - centerY);
-          score -= distanceFromCenter * 15;
+          score -= distanceFromCenter * 20;
 
-          // Heavy penalty for positions too close to tiger
-          const distanceFromTiger = Math.abs(x - macanX) + Math.abs(y - macanY);
-          if (distanceFromTiger <= 2) {
-            score -= 1000; // Increase penalty for proximity to tiger
-          }
+          // Penalti berat untuk posisi rentan dimakan macan
+          const isVulnerable = this.isVulnerableToTiger(
+            { x, y },
+            { x: macanX, y: macanY }
+          );
+          if (isVulnerable) score -= 5000;
 
-          // Bonus for positions that could help form defensive lines
-          if (y === 2 || (x >= 3 && x <= 5)) {
-            score += 100;
-          }
+          // Bonus posisi defensif
+          const isDefensive = this.defensiveLines.some(
+            (pos) => pos.x === x && pos.y === y
+          );
+          if (isDefensive) score += 200;
+
+          // Bonus untuk memblokir jalur macan
+          const blocksTiger = Math.abs(x - macanX) + Math.abs(y - macanY) === 1;
+          if (blocksTiger) score += 300;
 
           return score;
         }
@@ -249,7 +268,7 @@
                     targetY >= 0 &&
                     targetY < jmlNode.length &&
                     targetX >= 0 &&
-                    targetX < jmlNode[0].length
+                    targetX < jmlNode[targetY].length
                   ) {
                     if (jmlNode[targetY][targetX].type !== "") {
                       isAreaEmpty = false;
@@ -290,7 +309,7 @@
                   targetY >= 0 &&
                   targetY < jmlNode.length &&
                   targetX >= 0 &&
-                  targetX < jmlNode[0].length
+                  targetX < jmlNode[targetY].length
                 ) {
                   jmlNode[targetY][targetX].type = "Orang";
                 }
@@ -311,64 +330,91 @@
           let score = 0;
           const centerX = 4;
           const centerY = 2;
+          let tigerSurroundCount = 0;
 
-          // Evaluate piece placement and formation
+          // Corrected tiger position access
+          const tiger = jmlNode[state.macanY][state.macanX];
+
+          let tigerEscapeRoutes = 0;
+
           jmlNode.flat().forEach((node) => {
             if (node.type === "Orang") {
-              // Reward center control
-              const distanceFromCenter =
-                Math.abs(node.x - centerX) + Math.abs(node.y - centerY);
-              score += Math.max(0, 15 - distanceFromCenter * 3);
+              // Prioritas 1: Lindungi pion yang rentan dimakan
+              const vulnerable = this.isVulnerableToTiger(node, tiger);
+              if (vulnerable) score -= 3000;
 
-              // Evaluate piece protection
-              let protectedCount = 0;
-              let vulnerableToTiger = false;
-
-              node.arrNode.forEach((neighbor) => {
-                if (neighbor) {
-                  if (neighbor.type === "Orang") {
-                    protectedCount++;
-                  } else if (neighbor.type === "Macan") {
-                    vulnerableToTiger = true;
-                  }
-                }
-              });
-
-              // Reward protected pieces
-              score += protectedCount * 50;
-
-              // Penalize vulnerable pieces
-              if (vulnerableToTiger) {
-                score -= 1500; // Increase penalty for vulnerability to tiger
+              // Prioritas 2: Bentuk formasi mengelilingi macan
+              const distanceToTiger =
+                Math.abs(node.x - tiger.x) + Math.abs(node.y - tiger.y);
+              if (distanceToTiger <= 2) {
+                score += 200;
+                tigerSurroundCount++;
               }
 
-              // Heavy penalty for isolated pieces
-              if (protectedCount === 0) {
-                score -= 500; // Increase penalty for lack of protection
-              }
+              // Prioritas 3: Pertahankan formasi pertahanan
+              const protectedCount = this.countAdjacentAllies(node, jmlNode);
+              score += protectedCount * 100;
             }
           });
 
-          // Evaluate tiger threats
-          const validMovesForTiger = this.findValidMovesForTiger(
-            state.macanX,
-            state.macanY,
+          // Prioritas 4: Blokir jalan keluar macan
+          const validTigerMoves = this.findValidMovesForTiger(
+            tiger.x,
+            tiger.y,
             jmlNode
           );
+          tigerEscapeRoutes = validTigerMoves.length;
+          score -= tigerEscapeRoutes * 150;
 
-          validMovesForTiger.forEach((move) => {
-            if (move.canCapture) {
-              score -= 2000 * move.captureCount; // Increase penalty for tiger's capture potential
+          // Prioritas 5: Hitung potensi pengepungan
+          if (tigerSurroundCount >= 3) score += 1000;
+
+          // Prioritas 6: Tekan mobilitas macan
+          score -= validTigerMoves.filter((m) => m.canCapture).length * 2000;
+
+          // Pertimbangkan pion yang sudah dimakan
+          score -= state.eatenPion * 2500;
+
+          return score;
+        }
+
+        isVulnerableToTiger(node, tiger) {
+          const dx = node.x - tiger.x;
+          const dy = node.y - tiger.y;
+
+          if ((dx === 0 || dy === 0) && Math.abs(dx) + Math.abs(dy) > 1) {
+            return true;
+          }
+
+          if (Math.abs(dx) === Math.abs(dy) && Math.abs(dx) > 1) {
+            return true;
+          }
+
+          return false;
+        }
+
+        countAdjacentAllies(node, jmlNode) {
+          let count = 0;
+          const directions = [
+            { dx: -1, dy: 0 },
+            { dx: 1, dy: 0 },
+            { dx: 0, dy: -1 },
+            { dx: 0, dy: 1 },
+            { dx: -1, dy: -1 },
+            { dx: 1, dy: 1 },
+            { dx: -1, dy: 1 },
+            { dx: 1, dy: -1 },
+          ];
+
+          directions.forEach(({ dx, dy }) => {
+            const x = node.x + dx;
+            const y = node.y + dy;
+            if (x >= 0 && x < 9 && y >= 0 && y < 5) {
+              if (jmlNode[y][x].type === "Orang") count++;
             }
           });
 
-          // Penalize positions where tiger has many moves
-          score -= validMovesForTiger.length * 40;
-
-          // Consider eaten pieces
-          score -= state.eatenPion * 1500; // Increase penalty for eaten pieces
-
-          return score;
+          return count;
         }
 
         findValidMovesForTiger(macanX, macanY, jmlNode) {
@@ -385,16 +431,17 @@
           ];
 
           directions.forEach(({ dx, dy }) => {
-            let x = macanX + dx;
-            let y = macanY + dy;
+            let newX = macanX + dx;
+            let newY = macanY + dy;
 
+            // Corrected boundary checks
             if (
-              x >= 0 &&
-              x < jmlNode.length &&
-              y >= 0 &&
-              y < jmlNode[0].length
+              newY >= 0 &&
+              newY < jmlNode.length &&
+              newX >= 0 &&
+              newX < jmlNode[newY].length
             ) {
-              const target = jmlNode[x][y];
+              const target = jmlNode[newY][newX];
               if (target.type === "") {
                 moves.push({
                   node: target,
@@ -403,20 +450,23 @@
                 });
               } else if (target.type === "Orang") {
                 // Check for capture possibility
-                x = x + dx;
-                y = y + dy;
+                let captureX = newX + dx;
+                let captureY = newY + dy;
+
                 if (
-                  x >= 0 &&
-                  x < jmlNode.length &&
-                  y >= 0 &&
-                  y < jmlNode[0].length &&
-                  jmlNode[x][y].type === ""
+                  captureY >= 0 &&
+                  captureY < jmlNode.length &&
+                  captureX >= 0 &&
+                  captureX < jmlNode[captureY].length
                 ) {
-                  moves.push({
-                    node: jmlNode[x][y],
-                    canCapture: true,
-                    captureCount: 1,
-                  });
+                  const captureTarget = jmlNode[captureY][captureX];
+                  if (captureTarget.type === "") {
+                    moves.push({
+                      node: captureTarget,
+                      canCapture: true,
+                      captureCount: 1,
+                    });
+                  }
                 }
               }
             }
@@ -440,7 +490,6 @@
                 pionDiPapan: state.pionDiPapan + 1,
               };
 
-              // Make move
               const oldType = move.type;
               move.type = "Orang";
 
@@ -453,7 +502,6 @@
                 jmlNode
               );
 
-              // Undo move
               move.type = oldType;
 
               maxEval = Math.max(maxEval, evalScore);
@@ -516,7 +564,6 @@
               pionDiPapan: state.pionDiPapan + 1,
             };
 
-            // Make move
             const oldType = move.type;
             move.type = "Orang";
 
@@ -529,7 +576,6 @@
               jmlNode
             );
 
-            // Undo move
             move.type = oldType;
 
             if (moveValue > bestValue) {
@@ -555,32 +601,23 @@
           }
         }
 
-        /**
-         * Move one existing pion to the best empty position.
-         */
         movePionToBestPosition(state, jmlNode) {
           let bestScore = -Infinity;
           let bestMove = null;
           let sourceNode = null;
 
-          // Iterate through all pions on the board
           for (const node of jmlNode.flat()) {
             if (node.type === "Orang") {
-              // Try moving this pion to all empty positions
               for (const emptyNode of this.getPossibleMoves(jmlNode)) {
-                // Make the move temporarily
                 const oldType = emptyNode.type;
                 emptyNode.type = "Orang";
                 node.type = "";
 
-                // Evaluate the board
                 const score = this.evaluateBoard(state, jmlNode);
 
-                // Restore the original state
                 emptyNode.type = oldType;
                 node.type = "Orang";
 
-                // Update the best move if this one is better
                 if (score > bestScore) {
                   bestScore = score;
                   bestMove = emptyNode;
@@ -590,7 +627,6 @@
             }
           }
 
-          // Execute the best move
           if (bestMove && sourceNode) {
             sourceNode.type = "";
             bestMove.type = "Orang";
@@ -981,13 +1017,14 @@
             const humanAI = new HumanAI();
 
             const currentState = {
-              macanX: macanX,
-              macanY: macanY,
+              macanX: macanY,
+              macanY: macanX,
               pionDiPapan: pionDiPapan,
               eatenPion: eatenPion,
             };
 
             const bestMove = humanAI.getBestMove(currentState, jmlNode); // Langkah otomatis HumanAI
+            console.log(bestMove);
             if (bestMove) {
               bestMove.type = "Orang";
               jumlahPion--;
